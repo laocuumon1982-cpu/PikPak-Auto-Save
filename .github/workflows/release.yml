@@ -1,8 +1,8 @@
-# Tự đóng gói và tạo bản phát hành (Release) cho PikPak Auto Download.
+# Tự đóng gói và tạo bản phát hành (Release) cho PikPak Auto Save.
 # - Mỗi lần auto_download_pikpak_share.py trên nhánh main đổi APP_VERSION (VD v1.1) -> tự tạo Release v1.1.
 # - Hoặc tự tạo Release trên GitHub (tag vX.Y) -> tự đính kèm file.
-# Nút "⟳ Cập nhật" trong tool tải PikPakShare_Portable.zip (bản exe)
-# hoặc PikPakShare_vX.Y.zip (bản chạy bằng Python) từ Release mới nhất.
+# Nút "⟳ Cập nhật" trong tool tải PikPak-Auto-Save_Portable.zip (bản exe)
+# hoặc PikPak-Auto-Save_vX.Y.zip (bản chạy bằng Python) từ Release mới nhất.
 name: Build release
 on:
   push:
@@ -45,24 +45,24 @@ jobs:
         run: python -m pip install requests pystray pillow pyinstaller
       - name: Dong goi exe
         if: env.SKIP == '0'
-        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Download" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
+        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
       - name: Tao file zip
         if: env.SKIP == '0'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force PikPakShare_Portable | Out-Null
-          Copy-Item 'dist/PikPak Auto Download.exe', auto_download_pikpak_share.py, icon.ico, *.txt PikPakShare_Portable/
-          Compress-Archive -Force PikPakShare_Portable PikPakShare_Portable.zip
-          New-Item -ItemType Directory -Force PikPakShare | Out-Null
-          Copy-Item auto_download_pikpak_share.py, icon.ico, *.txt, *.bat PikPakShare/
-          Compress-Archive -Force PikPakShare "PikPakShare_$env:VER.zip"
+          New-Item -ItemType Directory -Force PikPak-Auto-Save_Portable | Out-Null
+          Copy-Item 'dist/PikPak Auto Save.exe', auto_download_pikpak_share.py, icon.ico, *.txt PikPak-Auto-Save_Portable/
+          Compress-Archive -Force PikPak-Auto-Save_Portable PikPak-Auto-Save_Portable.zip
+          New-Item -ItemType Directory -Force PikPak-Auto-Save | Out-Null
+          Copy-Item auto_download_pikpak_share.py, icon.ico, *.txt, *.bat PikPak-Auto-Save/
+          Compress-Archive -Force PikPak-Auto-Save "PikPak-Auto-Save_$env:VER.zip"
       - uses: softprops/action-gh-release@v2
         if: env.SKIP == '0'
         with:
           tag_name: ${{ env.VER }}
           target_commitish: ${{ github.sha }}
-          name: PikPak Auto Download ${{ env.VER }}
-          body: "Bản exe: PikPakShare_Portable.zip · Bản Python: PikPakShare_${{ env.VER }}.zip · Thay đổi: xem CHANGELOG.txt"
+          name: PikPak Auto Save ${{ env.VER }}
+          body: "Bản exe: PikPak-Auto-Save_Portable.zip · Bản Python: PikPak-Auto-Save_${{ env.VER }}.zip · Thay đổi: xem CHANGELOG.txt"
           files: |
-            PikPakShare_Portable.zip
-            PikPakShare_${{ env.VER }}.zip
+            PikPak-Auto-Save_Portable.zip
+            PikPak-Auto-Save_${{ env.VER }}.zip

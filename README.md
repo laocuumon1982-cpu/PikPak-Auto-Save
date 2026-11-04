@@ -1,4 +1,4 @@
-# PikPak Auto Download
+# PikPak Auto Save
 
 Tool Windows (Tkinter) theo dõi các thư mục phim trong **link chia sẻ PikPak** được chia sẻ cho bạn. Có tập mới thì:
 
@@ -8,6 +8,6 @@ Tool Windows (Tkinter) theo dõi các thư mục phim trong **link chia sẻ Pik
 Tập đã xong được đưa vào *Danh sách đã có* để lần sau không tải lại. Cùng bộ với [Auto Download - PikPak](https://github.com/laocuumon1982-cpu/PikPakAutoDownload).
 
 - Chạy bằng Python: `ChayTool.bat` (cài thư viện trước bằng `CaiDat.bat`).
-- Bản exe portable: tải `PikPakShare_Portable.zip` ở mục **Releases**.
+- Bản exe portable: tải `PikPak-Auto-Save_Portable.zip` ở mục **Releases**.
 - Dữ liệu người dùng nằm trong thư mục `Data` (không đưa lên đây).
 - Hướng dẫn: `HUONG_DAN.txt`, cập nhật: `HUONG_DAN_CAP_NHAT.txt`, lịch sử phiên bản: `CHANGELOG.txt`.

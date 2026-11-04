@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Download v1.1 by Duy Anh
+PikPak Auto Save v1.2 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -40,8 +40,8 @@ except Exception:
     pystray = PILImage = None
     TRAY_OK = False
 
-APP_TITLE = "PikPak Auto Download"
-APP_VERSION = "v1.1 by Duy Anh"
+APP_TITLE = "PikPak Auto Save"
+APP_VERSION = "v1.2 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -74,8 +74,8 @@ OWNED_FILE = DATA_DIR / "owned.json"        # Danh sách đã có (không tải)
 RCLONE_CONF = DATA_DIR / "rclone.conf"      # cấu hình rclone (đăng nhập PikPak) -> đi theo thư mục Data
 BACKUP_FILES = ("config.json", "owned.json", "history.json")
 BACKUP_DIR = "_Backup PikPakShare"
-EXE_NAME = "PikPak Auto Download.exe"
-OLD_EXE_NAMES = ("Auto Download - PikPak Share.exe",)     # tên exe bản v1.0
+EXE_NAME = "PikPak Auto Save.exe"
+OLD_EXE_NAMES = ("PikPak Auto Download.exe", "Auto Download - PikPak Share.exe")     # tên exe v1.1 / v1.0
 MACHINE = (os.environ.get("COMPUTERNAME") or "").strip() or __import__("socket").gethostname()
 PATH_KEYS = ("raidrive_root",)
 MACHINE_KEYS = PATH_KEYS + ("rd_remote_base", "start_with_windows")
@@ -160,7 +160,7 @@ def default_iphone_dir():
 
 
 def default_download_dir():
-    return os.path.join(os.path.expanduser("~"), "Downloads", "PikPak Auto Download")
+    return os.path.join(os.path.expanduser("~"), "Downloads", "PikPak Auto Save")
 
 
 DEFAULT_CONFIG = {
@@ -1537,7 +1537,7 @@ def stage_update(zip_path):
             root = Path(cur)
             break
     if root is None:
-        raise RuntimeError("File zip không phải bản PikPak Auto Download (không thấy auto_download_pikpak_share.py / .exe).")
+        raise RuntimeError("File zip không phải bản PikPak Auto Save (không thấy auto_download_pikpak_share.py / .exe).")
     frozen = getattr(sys, "frozen", False)
     new_ver = file_version(root / "auto_download_pikpak_share.py") if (root / "auto_download_pikpak_share.py").is_file() else ""
     new_exe = next((root / n for n in (exe_name, EXE_NAME, *OLD_EXE_NAMES) if (root / n).is_file()), None)
@@ -1566,7 +1566,7 @@ def stage_update(zip_path):
 
 
 def migrate_exe_name():
-    """Đổi tên exe "Auto Download - PikPak Share.exe" (v1.0) -> "PikPak Auto Download.exe".
+    """Đổi tên exe cũ ("PikPak Auto Download.exe" v1.1, "Auto Download - PikPak Share.exe" v1.0) -> "PikPak Auto Save.exe".
     Exe cũ (tên cũ) chạy code mới (auto_download_pikpak_share.py cạnh exe) -> nếu cạnh đó đã có exe tên mới
     thì mở exe tên mới rồi thoát. Exe tên mới khi chạy sẽ cất exe cũ vào _BanCu."""
     if not getattr(sys, "frozen", False):
@@ -5256,20 +5256,20 @@ class App(tk.Tk):
                    command=lambda: (save(), win.destroy(), self.check_update(silent=False))).pack(side="left")
         ttk.Button(fr, text="⇧  Cập nhật từ file zip...",
                    command=lambda: (save(), win.destroy(), self.update_from_file())).pack(side="left", padx=8)
-        ttk.Label(b, text="Có file PikPakShare_vX.Y.zip (VD: tải từ Claude) -> bấm \"Cập nhật từ file zip\". "
+        ttk.Label(b, text="Có file PikPak-Auto-Save_vX.Y.zip (VD: tải từ Claude) -> bấm \"Cập nhật từ file zip\". "
                           "Thư mục Data luôn được giữ nguyên.", style="Muted.TLabel", wraplength=460,
                   justify="left").pack(anchor="w", pady=(10, 0))
         win.bind("<Escape>", lambda e: win.destroy())
 
     def update_from_file(self):
-        p = filedialog.askopenfilename(title="Chọn file cập nhật (PikPakShare_vX.Y.zip)",
+        p = filedialog.askopenfilename(title="Chọn file cập nhật (PikPak-Auto-Save_vX.Y.zip)",
                                        filetypes=[("File zip", "*.zip")])
         if p:
             self._apply_update(p)
 
     def _download_update(self, url, tag):
         import tempfile
-        dest = Path(tempfile.gettempdir()) / f"PikPakShare_{tag}.zip"
+        dest = Path(tempfile.gettempdir()) / f"PikPak-Auto-Save_{tag}.zip"
         self.status_var.set(f"Đang tải bản {tag}...")
 
         def prog(pct, done):
@@ -6179,7 +6179,7 @@ class App(tk.Tk):
             img = PILImage.open(io.BytesIO(base64.b64decode(ICON64)))
             put = lambda what: (lambda: self.q.put(("tray", what)))
             menu = pystray.Menu(
-                pystray.MenuItem("Mở PikPak Auto Download", put("show"), default=True),
+                pystray.MenuItem("Mở PikPak Auto Save", put("show"), default=True),
                 pystray.MenuItem("Quét & Tải ngay", put("scan")),
                 pystray.MenuItem(lambda item: "Tắt tự quét" if self.cfg.get("auto_scan") else "Bật tự quét",
                                  put("toggle_auto")),

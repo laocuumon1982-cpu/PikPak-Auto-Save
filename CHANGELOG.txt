@@ -1,5 +1,10 @@
-PIKPAK AUTO DOWNLOAD by Duy Anh - NHẬT KÝ PHIÊN BẢN
+PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
+
+v1.2  (04/11/2026)
+  - Đổi tên tool thành "PikPak Auto Save" (file exe "PikPak Auto Save.exe"; bản exe cũ bấm Cập nhật sẽ tự chuyển
+    sang exe tên mới, exe cũ cất vào _BanCu - shortcut cũ cần tạo lại).
+  - File zip phát hành đổi tên: PikPak-Auto-Save_Portable.zip (bản exe) · PikPak-Auto-Save_vX.Y.zip (bản Python).
 
 v1.1  (04/11/2026)
   - Đổi tên tool thành "PikPak Auto Download" (file exe "PikPak Auto Download.exe"; bản exe v1.0 bấm Cập nhật
