@@ -1,0 +1,10 @@
+Data/
+_BanCu/
+__pycache__/
+rclone.exe
+*.new
+_capnhat.bat
+build/
+dist/
+*.spec
+PikPakShare_Portable/

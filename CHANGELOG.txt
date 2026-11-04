@@ -1,0 +1,12 @@
+AUTO DOWNLOAD - PIKPAK SHARE by Duy Anh - NHẬT KÝ PHIÊN BẢN
+=========================================================
+
+v1.0  (04/11/2026)
+  - Bản đầu tiên (dựa trên Auto Download - PikPak v3.3).
+  - Nguồn phim: thư mục con trong link chia sẻ PikPak. Nút "Chọn trong link chia sẻ..." duyệt link gốc
+    (đặt ở Cài đặt > Chung) để chọn thư mục phim, tự điền Tên phim.
+  - Đích 1 (chạy trước): Save tập mới vào My PikPak - chọn thư mục My PikPak muốn lưu vào.
+  - Đích 2 (bắt buộc): rclone tải tập đó từ My PikPak về HDD - nút chọn thư mục lưu.
+  - Tải về HDD lỗi thì lần sau chỉ tải lại từ My PikPak (không Save lại).
+  - Giữ các tính năng của bản PikPak: quét thư mục con, Danh sách đã có, báo thiếu tập, thanh năng lượng,
+    tự quét theo giờ, khay hệ thống, sao lưu Data lên PikPak, báo cáo lỗi, cập nhật qua GitHub.

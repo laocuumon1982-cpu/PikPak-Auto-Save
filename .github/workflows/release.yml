@@ -1,0 +1,68 @@
+# Tự đóng gói và tạo bản phát hành (Release) cho Auto Download - PikPak Share.
+# - Mỗi lần auto_download_pikpak_share.py trên nhánh main đổi APP_VERSION (VD v1.1) -> tự tạo Release v1.1.
+# - Hoặc tự tạo Release trên GitHub (tag vX.Y) -> tự đính kèm file.
+# Nút "⟳ Cập nhật" trong tool tải PikPakShare_Portable.zip (bản exe)
+# hoặc PikPakShare_vX.Y.zip (bản chạy bằng Python) từ Release mới nhất.
+name: Build release
+on:
+  push:
+    branches: [main]
+    paths: ["auto_download_pikpak_share.py"]
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Doc phien ban
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path auto_download_pikpak_share.py -Pattern '^APP_VERSION = "(v[\d.]+)').Matches[0].Groups[1].Value
+          if ("${{ github.event_name }}" -eq "release") { $v = "${{ github.event.release.tag_name }}" }
+          "VER=$v" | Out-File -Append $env:GITHUB_ENV
+          $skip = "0"
+          if ("${{ github.event_name }}" -ne "release") {
+            gh release view $v --repo "${{ github.repository }}" *> $null
+            if ($LASTEXITCODE -eq 0) { $skip = "1"; Write-Host "Release $v da co - bo qua." }
+          }
+          "SKIP=$skip" | Out-File -Append $env:GITHUB_ENV
+          exit 0
+      - uses: actions/setup-python@v6
+        if: env.SKIP == '0'
+        with:
+          python-version: "3.12"
+      - name: Cai thu vien
+        if: env.SKIP == '0'
+        run: python -m pip install requests pystray pillow pyinstaller
+      - name: Dong goi exe
+        if: env.SKIP == '0'
+        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "Auto Download - PikPak Share" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
+      - name: Tao file zip
+        if: env.SKIP == '0'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force PikPakShare_Portable | Out-Null
+          Copy-Item 'dist/Auto Download - PikPak Share.exe', auto_download_pikpak_share.py, icon.ico, *.txt PikPakShare_Portable/
+          Compress-Archive -Force PikPakShare_Portable PikPakShare_Portable.zip
+          New-Item -ItemType Directory -Force PikPakShare | Out-Null
+          Copy-Item auto_download_pikpak_share.py, icon.ico, *.txt, *.bat PikPakShare/
+          Compress-Archive -Force PikPakShare "PikPakShare_$env:VER.zip"
+      - uses: softprops/action-gh-release@v2
+        if: env.SKIP == '0'
+        with:
+          tag_name: ${{ env.VER }}
+          target_commitish: ${{ github.sha }}
+          name: Auto Download - PikPak Share ${{ env.VER }}
+          body: "Bản exe: PikPakShare_Portable.zip · Bản Python: PikPakShare_${{ env.VER }}.zip · Thay đổi: xem CHANGELOG.txt"
+          files: |
+            PikPakShare_Portable.zip
+            PikPakShare_${{ env.VER }}.zip
