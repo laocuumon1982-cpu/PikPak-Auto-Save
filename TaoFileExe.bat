@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title Dong goi Auto Download - PikPak Share Portable
+title Dong goi PikPak Auto Download Portable
 echo ==========================================================
-echo   DONG GOI AUTO DOWNLOAD - PIKPAK SHARE THANH BAN PORTABLE (.exe)
+echo   DONG GOI PIKPAK AUTO DOWNLOAD THANH BAN PORTABLE (.exe)
 echo ==========================================================
 echo.
 echo [1/4] Cai thu vien can thiet...
@@ -11,11 +11,11 @@ python -m pip install --upgrade requests pystray pillow pyinstaller
 if errorlevel 1 goto :loi
 echo.
 echo [2/4] Dong goi file exe (mat 1-3 phut)...
-python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "Auto Download - PikPak Share" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
+python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Download" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
 if errorlevel 1 goto :loi
 set OUT=PikPakShare_Portable
 if not exist "%OUT%" mkdir "%OUT%"
-copy /y "dist\Auto Download - PikPak Share.exe" "%OUT%\" >nul
+copy /y "dist\PikPak Auto Download.exe" "%OUT%\" >nul
 copy /y "HUONG_DAN.txt" "%OUT%\" >nul
 copy /y "CHANGELOG.txt" "%OUT%\" >nul
 if exist "HUONG_DAN_CAP_NHAT.txt" copy /y "HUONG_DAN_CAP_NHAT.txt" "%OUT%\" >nul
@@ -38,7 +38,7 @@ if exist "%OUT%\rclone.exe" (
 echo.
 echo [4/4] XONG!
 echo   Ban portable nam trong thu muc: %OUT%
-echo   Chep CA THU MUC %OUT% sang o cung di dong, chay "Auto Download - PikPak Share.exe".
+echo   Chep CA THU MUC %OUT% sang o cung di dong, chay "PikPak Auto Download.exe".
 echo   Khong can cai Python tren may khac.
 echo.
 pause

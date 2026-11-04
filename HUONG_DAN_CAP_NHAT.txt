@@ -1,4 +1,4 @@
-HƯỚNG DẪN CẬP NHẬT TỰ ĐỘNG QUA GITHUB - Auto Download - PikPak Share
+HƯỚNG DẪN CẬP NHẬT TỰ ĐỘNG QUA GITHUB - PikPak Auto Download
 =====================================================================
 
 CÁCH 1 - CẬP NHẬT TỪ FILE ZIP (không cần cài gì)

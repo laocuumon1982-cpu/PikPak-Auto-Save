@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Auto Download - PikPak Share v1.0 by Duy Anh
+PikPak Auto Download v1.1 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -40,8 +40,8 @@ except Exception:
     pystray = PILImage = None
     TRAY_OK = False
 
-APP_TITLE = "Auto Download - PikPak Share"
-APP_VERSION = "v1.0 by Duy Anh"
+APP_TITLE = "PikPak Auto Download"
+APP_VERSION = "v1.1 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -74,8 +74,8 @@ OWNED_FILE = DATA_DIR / "owned.json"        # Danh sách đã có (không tải)
 RCLONE_CONF = DATA_DIR / "rclone.conf"      # cấu hình rclone (đăng nhập PikPak) -> đi theo thư mục Data
 BACKUP_FILES = ("config.json", "owned.json", "history.json")
 BACKUP_DIR = "_Backup PikPakShare"
-EXE_NAME = "Auto Download - PikPak Share.exe"
-OLD_EXE_NAMES = ()
+EXE_NAME = "PikPak Auto Download.exe"
+OLD_EXE_NAMES = ("Auto Download - PikPak Share.exe",)     # tên exe bản v1.0
 MACHINE = (os.environ.get("COMPUTERNAME") or "").strip() or __import__("socket").gethostname()
 PATH_KEYS = ("raidrive_root",)
 MACHINE_KEYS = PATH_KEYS + ("rd_remote_base", "start_with_windows")
@@ -1537,7 +1537,7 @@ def stage_update(zip_path):
             root = Path(cur)
             break
     if root is None:
-        raise RuntimeError("File zip không phải bản Auto Download - PikPak Share (không thấy auto_download_pikpak_share.py / .exe).")
+        raise RuntimeError("File zip không phải bản PikPak Auto Download (không thấy auto_download_pikpak_share.py / .exe).")
     frozen = getattr(sys, "frozen", False)
     new_ver = file_version(root / "auto_download_pikpak_share.py") if (root / "auto_download_pikpak_share.py").is_file() else ""
     new_exe = next((root / n for n in (exe_name, EXE_NAME, *OLD_EXE_NAMES) if (root / n).is_file()), None)
@@ -1566,7 +1566,7 @@ def stage_update(zip_path):
 
 
 def migrate_exe_name():
-    """Đổi tên exe PikPakShare.exe -> "Auto Download - PikPak Share.exe".
+    """Đổi tên exe "Auto Download - PikPak Share.exe" (v1.0) -> "PikPak Auto Download.exe".
     Exe cũ (tên cũ) chạy code mới (auto_download_pikpak_share.py cạnh exe) -> nếu cạnh đó đã có exe tên mới
     thì mở exe tên mới rồi thoát. Exe tên mới khi chạy sẽ cất exe cũ vào _BanCu."""
     if not getattr(sys, "frozen", False):
@@ -5565,7 +5565,9 @@ class App(tk.Tk):
         win.title("Chọn thư mục phim trong link chia sẻ")
         win.configure(bg=C_CARD)
         win.transient(parent or self)
-        win.geometry(f"640x520+{self.winfo_rootx() + 180}+{self.winfo_rooty() + 80}")
+        h = max(560, min(self.winfo_screenheight() - 110, 1000))       # cao gần hết màn hình, thấy đủ thư mục
+        win.geometry(f"720x{h}+{self.winfo_rootx() + 160}+{max(0, (self.winfo_screenheight() - h) // 2 - 20)}")
+        win.minsize(560, 420)
         body = ttk.Frame(win, style="Card.TFrame", padding=14)
         body.pack(fill="both", expand=True)
         path_var = tk.StringVar()
@@ -5697,16 +5699,21 @@ class App(tk.Tk):
         win.title("Chọn thư mục trên My PikPak")
         win.configure(bg=C_CARD)
         win.transient(parent or self)
-        win.geometry(f"520x460+{self.winfo_rootx() + 200}+{self.winfo_rooty() + 100}")
+        h = max(560, min(self.winfo_screenheight() - 110, 1000))
+        win.geometry(f"640x{h}+{self.winfo_rootx() + 200}+{max(0, (self.winfo_screenheight() - h) // 2 - 20)}")
+        win.minsize(480, 420)
         body = ttk.Frame(win, style="Card.TFrame", padding=14)
         body.pack(fill="both", expand=True)
         cur = [pikpak_join(target_var.get())]
         path_var = tk.StringVar()
-        ttk.Label(body, textvariable=path_var, style="Section.TLabel", wraplength=480).pack(anchor="w")
+        ttk.Label(body, textvariable=path_var, style="Section.TLabel", wraplength=600).pack(anchor="w")
         lf = tk.Frame(body, bg=C_BORDER, padx=1, pady=1)
         lf.pack(fill="both", expand=True, pady=8)
         lb = tk.Listbox(lf, font=(FONT, 10), relief="flat", activestyle="none", selectbackground=C_SEL,
                         selectforeground=C_ACCENT, bg=C_FIELD, fg=C_TEXT, highlightthickness=0)
+        sb = ttk.Scrollbar(lf, orient="vertical", command=lb.yview)
+        lb.configure(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
         lb.pack(fill="both", expand=True)
         info = tk.StringVar()
         ttk.Label(body, textvariable=info, style="Muted.TLabel").pack(anchor="w")
@@ -6172,7 +6179,7 @@ class App(tk.Tk):
             img = PILImage.open(io.BytesIO(base64.b64decode(ICON64)))
             put = lambda what: (lambda: self.q.put(("tray", what)))
             menu = pystray.Menu(
-                pystray.MenuItem("Mở Auto Download - PikPak Share", put("show"), default=True),
+                pystray.MenuItem("Mở PikPak Auto Download", put("show"), default=True),
                 pystray.MenuItem("Quét & Tải ngay", put("scan")),
                 pystray.MenuItem(lambda item: "Tắt tự quét" if self.cfg.get("auto_scan") else "Bật tự quét",
                                  put("toggle_auto")),

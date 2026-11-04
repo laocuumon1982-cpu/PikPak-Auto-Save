@@ -1,4 +1,4 @@
-# Auto Download - PikPak Share
+# PikPak Auto Download
 
 Tool Windows (Tkinter) theo dõi các thư mục phim trong **link chia sẻ PikPak** được chia sẻ cho bạn. Có tập mới thì:
 

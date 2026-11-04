@@ -1,5 +1,11 @@
-AUTO DOWNLOAD - PIKPAK SHARE by Duy Anh - NHẬT KÝ PHIÊN BẢN
+PIKPAK AUTO DOWNLOAD by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
+
+v1.1  (04/11/2026)
+  - Đổi tên tool thành "PikPak Auto Download" (file exe "PikPak Auto Download.exe"; bản exe v1.0 bấm Cập nhật
+    sẽ tự chuyển sang exe tên mới, exe cũ cất vào _BanCu - shortcut cũ cần tạo lại).
+  - Hộp "Chọn thư mục phim trong link chia sẻ" và "Chọn thư mục trên My PikPak" cao gần hết màn hình,
+    có thanh cuộn, kéo đổi kích thước được - thấy đủ các thư mục.
 
 v1.0  (04/11/2026)
   - Bản đầu tiên (dựa trên Auto Download - PikPak v3.3).

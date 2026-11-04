@@ -1,4 +1,4 @@
-# Tự đóng gói và tạo bản phát hành (Release) cho Auto Download - PikPak Share.
+# Tự đóng gói và tạo bản phát hành (Release) cho PikPak Auto Download.
 # - Mỗi lần auto_download_pikpak_share.py trên nhánh main đổi APP_VERSION (VD v1.1) -> tự tạo Release v1.1.
 # - Hoặc tự tạo Release trên GitHub (tag vX.Y) -> tự đính kèm file.
 # Nút "⟳ Cập nhật" trong tool tải PikPakShare_Portable.zip (bản exe)
@@ -45,13 +45,13 @@ jobs:
         run: python -m pip install requests pystray pillow pyinstaller
       - name: Dong goi exe
         if: env.SKIP == '0'
-        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "Auto Download - PikPak Share" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
+        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Download" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
       - name: Tao file zip
         if: env.SKIP == '0'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force PikPakShare_Portable | Out-Null
-          Copy-Item 'dist/Auto Download - PikPak Share.exe', auto_download_pikpak_share.py, icon.ico, *.txt PikPakShare_Portable/
+          Copy-Item 'dist/PikPak Auto Download.exe', auto_download_pikpak_share.py, icon.ico, *.txt PikPakShare_Portable/
           Compress-Archive -Force PikPakShare_Portable PikPakShare_Portable.zip
           New-Item -ItemType Directory -Force PikPakShare | Out-Null
           Copy-Item auto_download_pikpak_share.py, icon.ico, *.txt, *.bat PikPakShare/
@@ -61,7 +61,7 @@ jobs:
         with:
           tag_name: ${{ env.VER }}
           target_commitish: ${{ github.sha }}
-          name: Auto Download - PikPak Share ${{ env.VER }}
+          name: PikPak Auto Download ${{ env.VER }}
           body: "Bản exe: PikPakShare_Portable.zip · Bản Python: PikPakShare_${{ env.VER }}.zip · Thay đổi: xem CHANGELOG.txt"
           files: |
             PikPakShare_Portable.zip
