@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v1.2 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v1.3 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -8,6 +8,8 @@ NGUYÊN LÝ
    - Đích 1 · My PikPak (bắt buộc, chạy trước): tập mới được SAVE vào thư mục này trong My PikPak của bạn
      (sao chép trên máy chủ PikPak - nhanh, không tốn mạng).
    - Đích 2 · HDD (bắt buộc): rclone (tài khoản của bạn) tải tập đó từ My PikPak về thư mục HDD (đa luồng).
+   - COPY_TO_IPHONE (mặc định bật): tải về HDD xong copy thêm 1 bản vào C:\Users\<tên>\Downloads\Video\COPY_TO_IPHONE
+     (mọi phim chung 1 thư mục; đổi thư mục / tắt ở Cài đặt > Chung).
    Tool quét nguồn, chỉ lấy tập CHƯA có trong "Danh sách đã có" -> ① Save My PikPak -> ② tải về HDD
    -> thêm vào Danh sách đã có để lần sau không tải lại.
 

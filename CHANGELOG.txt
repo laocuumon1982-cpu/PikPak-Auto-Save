@@ -1,6 +1,11 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v1.3  (07/11/2026)
+  - Mỗi tập tải về HDD xong tự copy thêm 1 bản vào thư mục chung COPY_TO_IPHONE
+    (mặc định C:\Users\<tên>\Downloads\Video\COPY_TO_IPHONE, không chia thư mục con).
+    Bật/tắt và nút "Chọn..." đổi thư mục ở Cài đặt > Chung. Copy lỗi chỉ báo lỗi, không làm hỏng tập đã tải.
+
 v1.2  (04/11/2026)
   - Đổi tên tool thành "PikPak Auto Save" (file exe "PikPak Auto Save.exe"; bản exe cũ bấm Cập nhật sẽ tự chuyển
     sang exe tên mới, exe cũ cất vào _BanCu - shortcut cũ cần tạo lại).

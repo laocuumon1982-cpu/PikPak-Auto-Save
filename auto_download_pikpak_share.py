@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v1.2 by Duy Anh
+PikPak Auto Save v1.3 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -41,7 +41,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v1.2 by Duy Anh"
+APP_VERSION = "v1.3 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -77,7 +77,7 @@ BACKUP_DIR = "_Backup PikPakShare"
 EXE_NAME = "PikPak Auto Save.exe"
 OLD_EXE_NAMES = ("PikPak Auto Download.exe", "Auto Download - PikPak Share.exe")     # tên exe v1.1 / v1.0
 MACHINE = (os.environ.get("COMPUTERNAME") or "").strip() or __import__("socket").gethostname()
-PATH_KEYS = ("raidrive_root",)
+PATH_KEYS = ("raidrive_root", "iphone_dir")
 MACHINE_KEYS = PATH_KEYS + ("rd_remote_base", "start_with_windows")
 LOG_FILE = DATA_DIR / "log.txt"
 
@@ -156,7 +156,7 @@ ICON64 = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAMe0lEQVR42t2be4xd1XXGf2
 ICON28 = "iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAFbklEQVR42pWW+4ucZxXHP+e8l5md2dlEWVq00BRjQ1NErD8YElutiUIsJIEtK9SiSL1A9gcNaERQXFbFC80PFewu7T+gNCYiipdSCaQlodVCqYSK9Ubxlq5pNjvZmX3feZ5z/OGdmZ29JGEfeN4fXs5zvuec77kJuMzOInNzYge+5Q95aifc2IfTwgERYTvH3RFAaIvyogR94sI35Vezs65zc7hMT3ty+rTE/bO9+aSWHncHCw7msD2oEVBABU0FEYhFWLg4l81MT3siAPu/UczXWvnxst2zvrDeSqcMP+B+AyFzQyBvZVq0y4WL36nNyP1f7x7WrP7rWPYCeMIt/BIREoUQnWiVcJoKApg5vqW/EpM8S623+vGUKCdFcIlR5CZ8uUOiUPacdgE7mzBRF8zhyrJhDuNjlZyvt1rcTSRkTpSTqUTb51aIuic38yxR6HScyR3CZw+lHHpfwttbgplz6Q3n9POBi69Farmg0udxGH5PvCwQt33y4S93Hbetw6eVparQ7sB736V877Eakzu2DsTPLwS+/5OSWj6SPBsUphKCIyLDOPSFkgS6XacXqoS9Y1I59YUaO5qyKdSDMB47kLLUduZ/VtBqCjGO6BTAg6diLhtNUYXla86eOxOO3Z+x6x0Jd0wKO5rCsy8U/PLcKgBHD9b56AdruINKZdgjB1POniu42jZqGcSwjlBJJfomrtrLztSDOV/8RJ1GXdZ586/LxvN/KAG47958+F8V3CDPhCP7M5462yVtCokKNsKYSjQGN3Gju2Lcd7fytU+P0agLIYIZhAAikGfQagqtppBnbIqMO3zuWI0nT44znkMojMTWMFTNGd7oeDAeO1oHIEZIk0qRjBS5WXW3KniR6t0H3pPylU81CIUhoxhDZDNCYdw2AXvuSocWD060SpH5aCOp/kXb7Gk0eOD9GffsUoqOod7HkegMLtFJcJItGlueVZk7VpNhZo7VhCRhU2hF1vLk9p1CLA3tY6QyYnIusPSW8Z/Lkd27UswqkOXrztlnu6SJ8OqfeuRZ1cp+/2rJauGE4Dx8eIyJ8cqY0X61uBjJcCSC+BZJU3aNn/5iBZHKixih2RA6XefbT7Z5+VJV2HkOL18q+cFTbRavGs1GlY0DDlXhhZcK/vx6SSOrcqMf0jVA6xkTY/Db51b4zXMd0rTqNgAzjzaZ+WST7mqlVAVWV+HIoTpf/fz4Gtexisq1ZeNHTy+RizOKsakOMWe8Bqd+eBWLzuGPNYecfukzTf79P+OlV0pUnHv3ZMydmBjW7+C8uRj57qmrXFkMNBtCDGucypGpf/rG2Sn9wV2WsHt3xtt2Km6Vt92u88f/Ki7CXROBd04mhOhD3szgr3/rsXTNaIxV7W2UUzl67A2/4YRIhNXCiaGa/oMRlY+nuAp2vUfZbwjD7ihVt0lStpwJqUTbkFdrD1euR1RhXZUYrL5VVmNVIdnw0gw0FQiC+OapmqqJuNu6iakC3Y4zNTXBAw+OY+ao3nzBcXNEhX/8veTp+SvIRjQHEZWUGFYUbVagMpyD3jN23Zlzz97atgBrOaQ4NjL1cEdEccKKTB16/Xdp2vhIL3RMRJJRi0KE1oRua2HrrBhuVBz6cHOMWdrQEDrn0iTwuKocTFzcbY1PEcgVOkthW4CaVKuhD0vBXUVdTSQJPC4AD3/otflGfvvxbvmm9ZuhymBUi2zaim64i1b1hA/eepWnY/lt2ikvL5w5v3dGp6efSc6c3ztTFIsLuTQ0o64aQWKsmnq/JUm4xR3IREdjRCNk1DWXhhbF4sKZ83tnpqefSWR01X/kwF8eAk4YYZ9Aq2/gdvdvrxKEtpK+CDzx4wvvHq76/wcfdelN5/BKZQAAAABJRU5ErkJggg=="
 
 def default_iphone_dir():
-    return os.path.join(os.path.expanduser("~"), "Downloads", "Video", "COPY TO IPHONE")
+    return os.path.join(os.path.expanduser("~"), "Downloads", "Video", "COPY_TO_IPHONE")
 
 
 def default_download_dir():
@@ -201,6 +201,8 @@ DEFAULT_CONFIG = {
     "rd_autostart": False,
     "raidrive_exe": "",           # đường dẫn RaiDrive.exe (trống = tự tìm)
     "rd_to_tray": False,
+    "iphone_on": True,            # copy thêm 1 bản vào thư mục chung COPY_TO_IPHONE
+    "iphone_dir": default_iphone_dir(),
     "folders": [],
 }
 
@@ -3667,13 +3669,48 @@ class App(tk.Tk):
                                                    "đã xóa file lỗi, đưa vào danh sách tải lại")
                 return False
             self.log(f"⬇ ② Đã tải về HDD: {dst}")
+        phase[:] = ["📱", "Copy vào COPY_TO_IPHONE"]
+        last[1] = -1
+        self._copy_to_iphone(item, fcode, name, dst, size, prog)
         rec.update(status=STATUS_DONE, done_ts=time.time(), path=dst, hdd=dst, tries=0, error="",
                    upload="done", upload_msg=saved, upload_ts=time.time())
         self.q.put(("hist", fcode, dict(rec)))
         self.q.put(("owned_add", fcode, folder_code, movie, name, size, "tool"))
-        self.q.put(("rowstatus", fcode, "✔  Xong · My PikPak · HDD", "done"))
+        self.q.put(("rowstatus", fcode, "✔  Xong · My PikPak · HDD" + (" · iPhone" if cfg.get("iphone_on", True) else ""),
+                    "done"))
         self.log(f"✔ Xong: {name}")
         return True
+
+    def _copy_to_iphone(self, item, fcode, name, src, size, prog):
+        """Copy thêm 1 bản từ HDD vào thư mục chung COPY_TO_IPHONE. Lỗi chỉ báo, không làm hỏng tập đã tải."""
+        if not self.cfg.get("iphone_on", True) or self.stop_flag.is_set() or not src or not os.path.isfile(src):
+            return
+        d = from_portable(self.cfg.get("iphone_dir") or "") or default_iphone_dir()
+        dst = os.path.join(d, safe_name(name))
+        try:
+            if os.path.normcase(os.path.abspath(dst)) == os.path.normcase(os.path.abspath(src)):
+                return
+            os.makedirs(d, exist_ok=True)
+            if os.path.isfile(dst) and os.path.getsize(dst) == os.path.getsize(src):
+                return                             # đã có sẵn
+            self.q.put(("rowstatus", fcode, "📱  Đang copy vào COPY_TO_IPHONE...", "dl"))
+            self.q.put(("energy", "dl", 0, f"📱 {name}"))
+            ok, msg = copy_with_progress(src, dst, prog, self.stop_flag, chunk=16 << 20)
+            if not ok:
+                self._remove_broken(dst, size, force=True)
+                raise OSError(msg or "lỗi không rõ")
+            self.log(f"📱 Đã copy vào COPY_TO_IPHONE: {dst}")
+        except Exception as e:
+            self.log(f"⚠ [{name}] Copy vào COPY_TO_IPHONE lỗi: {e}")
+            self.report_error(f"Copy vào COPY_TO_IPHONE lỗi: {name}", str(e), item=item,
+                              exc=e if not isinstance(e, OSError) else None)
+
+    def _browse_iphone(self):
+        cur = self.iphone_dir_var.get().strip()
+        p = filedialog.askdirectory(title="Chọn thư mục COPY_TO_IPHONE", initialdir=cur if os.path.isdir(cur) else os.path.expanduser("~"))
+        if p:
+            self.iphone_dir_var.set(os.path.normpath(p))
+            self.save_config()
 
     def history_mark_done(self):
         sel = self.hist_tree.selection()
@@ -4541,6 +4578,8 @@ class App(tk.Tk):
         self.rdtray_var = tk.BooleanVar(value=bool(self.cfg.get("rd_to_tray", True)))
         self.rdexe_var = tk.StringVar(value=self.cfg.get("raidrive_exe", "") or "")
         self.share_root_var = tk.StringVar(value=self.cfg.get("share_root", "") or "")
+        self.iphone_on_var = tk.BooleanVar(value=bool(self.cfg.get("iphone_on", True)))
+        self.iphone_dir_var = tk.StringVar(value=self.cfg.get("iphone_dir") or default_iphone_dir())
         self.thr_var = tk.IntVar(value=int(self.cfg.get("copy_threads", 4) or 4))
         self.rdmin_var = tk.IntVar(value=int(self.cfg.get("rd_check_min", 2) or 0))
         self.map_status = tk.StringVar(value="")
@@ -4675,6 +4714,10 @@ class App(tk.Tk):
         g.entry("Link chia sẻ gốc", self.share_root_var, lambda: open_target(self.share_root_var.get().strip()), btn="↗ Mở",
                 hint="Link thư mục PikPak được chia sẻ cho bạn. Khi thêm thư mục phim, bấm \"Chọn trong link chia "
                      "sẻ...\" để chọn thư mục con từ link này. Có mật khẩu: thêm ?pwd=xxxx vào cuối link.")
+        g.check("Copy thêm 1 bản vào thư mục COPY_TO_IPHONE (mọi phim chung 1 thư mục)", self.iphone_on_var)
+        g.entry("Thư mục COPY_TO_IPHONE", self.iphone_dir_var, self._browse_iphone,
+                hint="Mỗi tập tải về HDD xong được copy thêm 1 bản vào đây (không chia thư mục con) để chép sang "
+                     "iPhone. File ở đây bạn tự xóa sau khi chép - tool không tải lại.")
         g.entry("Giới hạn tốc độ upload", self.bw_var, width=12,
                 hint="VD 20M = 20 MB/s, 500K = 500 KB/s. Để trống = không giới hạn (áp dụng cho rclone upload My PikPak).")
         g.spin("Nghỉ giữa 2 file (giây)", self.delay_var, 0, 60)
@@ -6002,6 +6045,8 @@ class App(tk.Tk):
             self.cfg["rd_to_tray"] = self.rdtray_var.get()
             self.cfg["raidrive_exe"] = self.rdexe_var.get().strip()
             self.cfg["share_root"] = self.share_root_var.get().strip()
+            self.cfg["iphone_on"] = self.iphone_on_var.get()
+            self.cfg["iphone_dir"] = self.iphone_dir_var.get().strip() or default_iphone_dir()
             self.cfg["copy_threads"] = 1
             try:
                 self.cfg["rd_check_min"] = max(0, int(self.rdmin_var.get()))
