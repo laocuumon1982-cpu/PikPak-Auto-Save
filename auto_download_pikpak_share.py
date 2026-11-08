@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v1.3 by Duy Anh
+PikPak Auto Save v1.4 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -41,7 +41,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v1.3 by Duy Anh"
+APP_VERSION = "v1.4 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -148,6 +148,114 @@ C_CHECK_BORDER = "#b5c0cc"
 C_GLYPH = "#c3ccd6"
 ENERGY_EMPTY = "#e3e9ef"
 ENERGY_SETS = {}              # màu riêng cho từng thanh (dl / up / all); trống = dùng ENERGY_COLORS
+
+# ----- 2 giao diện: "classic" = giao diện GỐC (v1.3, không xóa được) · "dynamic" = giao diện ĐỘNG (LED, đồng hồ số,
+#       thanh năng lượng chạy) - chọn bằng nút "◐ Giao diện", xóa được trong Cài đặt > Chung.
+THEMES = {
+    "classic": {},
+    "dynamic": {
+        "C_BG": "#0a0f1a", "C_CARD": "#0f1626", "C_PANEL": "#121b2e", "C_FIELD": "#0c1322",
+        "C_ACCENT": "#00c8f0", "C_ACCENT_HOVER": "#33d6ff", "C_ACCENT_DIS": "#1d4a5c", "C_ON_ACCENT": "#03121b",
+        "C_SOFT": "#0f2233", "C_SOFT_BORDER": "#1c4a60", "C_SEL": "#13324a", "C_HEAD": "#101a2c",
+        "C_ODD": "#0d1524", "C_TEXT": "#d7e6f5", "C_MUTED": "#7f93ad", "C_BORDER": "#1d2a40",
+        "C_GREEN": "#22e58b", "C_ORANGE": "#ffb020", "C_RED": "#ff4d6a", "C_BLUE": "#38a8ff",
+        "C_WARN_BG": "#2a2210",
+        "C_SIDE": "#070b14", "C_SIDE_CARD": "#0d1424", "C_SIDE_HOVER": "#16213a", "C_SIDE_ACTIVE": "#00c8f0",
+        "C_SIDE_TEXT": "#cfe0f2", "C_SIDE_MUTED": "#6d82a0",
+        "C_BTN_HOVER": "#16243a", "C_DIS_TEXT": "#4a5a70",
+        "C_DANGER_BG": "#2a1018", "C_DANGER_BORDER": "#5a2030", "C_DANGER_HOVER": "#3a1622", "C_DANGER_DIS": "#7a4050",
+        "C_TROUGH": "#16223a", "C_SCROLL_ACT": "#24344f", "C_SKIP": "#4f6078",
+        "C_SIDE_OK": "#22e58b", "C_SIDE_BAD": "#ff6b81", "C_ERR_BG": "#3a0f1c", "C_ERR_FG": "#ffc2cc",
+        "C_FOOT": "#4f6078", "C_LOG_BG": "#050910", "C_LOG_FG": "#7dffb5", "C_CHECK_BORDER": "#2e4260",
+        "C_GLYPH": "#1f2f48", "ENERGY_EMPTY": "#16223a",
+        "ENERGY_COLORS": ("#00c8f0", "#00e0c0", "#22e58b", "#9cf53c", "#ffd23f", "#ffb020"),
+    },
+}
+THEME_NAMES = {"classic": "Giao diện gốc  (v1.3)",
+               "dynamic": "Giao diện động  (LED · đồng hồ số · thanh năng lượng)"}
+
+
+def apply_theme(name):
+    """Đổi bảng màu toàn cục (gọi trước khi dựng giao diện)."""
+    name = name if name in THEMES else "classic"
+    globals().update(THEMES[name])
+    return name
+
+
+SEG_MAP = {"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc",
+           "7": "abc", "8": "abcdefg", "9": "abcdfg", "-": "g", " ": "", "%": "abfg", "E": "afged", "r": "eg"}
+
+
+class SevenSeg(tk.Canvas):
+    """Màn hình LED 7 đoạn (đồng hồ số / bộ đếm). Chữ hỗ trợ: 0-9 - : . %  và khoảng trắng."""
+    def __init__(self, parent, bg, chars=8, h=34, on="#00c8f0", off=None):
+        self.h = h
+        self.dw = max(10, int(h * 0.55))
+        super().__init__(parent, bg=bg, height=h + 4, width=int(chars * (self.dw + h * 0.18)) + 6,
+                         highlightthickness=0, bd=0)
+        self.on, self.off, self.text = on, off or _mix(bg, on, 0.12), None
+
+    def set(self, text, color=None):
+        text = str(text)
+        if text == self.text and not color:
+            return
+        self.text = text
+        if color:
+            self.on = color
+        self.delete("all")
+        h, dw = self.h, self.dw
+        t = max(2, int(h * 0.11))                  # độ dày nét
+        x = 3
+        for ch in text:
+            if ch == ":":
+                for yy in (h * 0.32, h * 0.72):
+                    self.create_oval(x + 1, yy - t / 2 + 2, x + 1 + t, yy + t / 2 + 2, fill=self.on, outline="")
+                x += t + int(h * 0.18)
+                continue
+            if ch == ".":
+                self.create_oval(x, h - t + 2, x + t, h + 2, fill=self.on, outline="")
+                x += t + int(h * 0.12)
+                continue
+            lit = SEG_MAP.get(ch, "")
+            y0, ym, y1 = 2, 2 + h / 2, 2 + h
+            sk = h * 0.08                          # nghiêng nhẹ cho giống LED
+            segs = {"a": (x + t, y0, x + dw - t, y0 + t), "g": (x + t, ym - t / 2, x + dw - t, ym + t / 2),
+                    "d": (x + t, y1 - t, x + dw - t, y1),
+                    "f": (x, y0 + t, x + t, ym - t / 2), "b": (x + dw - t, y0 + t, x + dw, ym - t / 2),
+                    "e": (x, ym + t / 2, x + t, y1 - t), "c": (x + dw - t, ym + t / 2, x + dw, y1 - t)}
+            for k, (ax, ay, bx, by) in segs.items():
+                f0 = sk * (1 - (ay - y0) / h)
+                f1 = sk * (1 - (by - y0) / h)
+                self.create_polygon(ax + f0, ay, bx + f0, ay, bx + f1, by, ax + f1, by,
+                                    fill=self.on if k in lit else self.off, outline="")
+            x += dw + int(h * 0.18)
+
+
+class Led(tk.Canvas):
+    """Đèn LED tròn có quầng sáng: set(True/False/None, blink)."""
+    def __init__(self, parent, bg, color="#22e58b", size=12):
+        super().__init__(parent, bg=bg, width=size + 8, height=size + 8, highlightthickness=0, bd=0)
+        self.bgc, self.color, self.size, self.state, self.blink = bg, color, size, None, False
+        self._draw(False)
+
+    def set(self, state, color=None, blink=False):
+        self.state, self.blink = state, blink
+        if color:
+            self.color = color
+
+    def _draw(self, on):
+        self.delete("all")
+        s, o = self.size, 4
+        if on:
+            self.create_oval(o - 3, o - 3, o + s + 3, o + s + 3, fill=_mix(self.bgc, self.color, 0.25), outline="")
+            self.create_oval(o, o, o + s, o + s, fill=self.color, outline=_mix(self.color, "#ffffff", 0.3))
+            self.create_oval(o + s * 0.25, o + s * 0.2, o + s * 0.55, o + s * 0.45,
+                             fill=_mix(self.color, "#ffffff", 0.6), outline="")
+        else:
+            self.create_oval(o, o, o + s, o + s, fill=_mix(self.bgc, self.color, 0.16), outline=_mix(self.bgc, "#ffffff", 0.08))
+
+    def tick(self, phase):
+        self._draw(bool(self.state) and (not self.blink or phase))
 
 FONT = "Segoe UI"
 MONO = "Consolas"             # số liệu kiểu màn hình máy
@@ -1670,6 +1778,7 @@ class EnergyBar(tk.Canvas):
     def __init__(self, parent, bg, height=18, seg=36, empty=None, colors=None):
         super().__init__(parent, bg=bg, height=height, highlightthickness=0, bd=0)
         self.seg, self.empty, self.colors, self.pct = seg, empty or ENERGY_EMPTY, colors or ENERGY_COLORS, 0
+        self.shine = -1                            # vị trí vệt sáng chạy (giao diện động), -1 = tắt
         self.bind("<Configure>", lambda e: self._draw())
 
     def _color(self, t):
@@ -1687,6 +1796,16 @@ class EnergyBar(tk.Canvas):
             self.pct = pct
             self._draw()
 
+    def animate(self, step):
+        """Giao diện động: cho vệt sáng chạy trên phần đã nạp khi đang chạy (0 < % < 100)."""
+        w = self.winfo_width()
+        n = max(8, min(self.seg, int(w // 14))) if w >= 20 else 0
+        full = int(self.pct / 100 * n)
+        new = (step % (full + 4)) if 0 < self.pct < 100 and full > 0 else -1
+        if new != self.shine:
+            self.shine = new
+            self._draw()
+
     def _draw(self):
         self.delete("all")
         w, h = self.winfo_width(), self.winfo_height()
@@ -1701,6 +1820,8 @@ class EnergyBar(tk.Canvas):
             fill = self._color(i / max(1, n - 1)) if i < full else self.empty
             if i < full < i + 1:                       # ô đang nạp dở -> nhạt hơn
                 fill = _mix(self.empty, self._color(i / max(1, n - 1)), full - i)
+            if i < full and self.shine >= 0 and abs(i - self.shine) <= 1:     # vệt sáng chạy dọc thanh
+                fill = _mix(fill, "#ffffff", 0.55 if i == self.shine else 0.28)
             self.create_rectangle(x0, 1, x0 + sw, h - 1, fill=fill, outline="")
             if i < full:                               # vệt sáng phía trên cho có "năng lượng"
                 self.create_rectangle(x0, 1, x0 + sw, 1 + max(2, h // 4), fill=_mix(fill, "#ffffff", 0.45),
@@ -1710,7 +1831,12 @@ class EnergyBar(tk.Canvas):
 class App(tk.Tk):
     def __init__(self, auto=False, startup=False):
         super().__init__()
-        self.layout = "classic"
+        try:
+            _disk = load_json(CONFIG_FILE, {})
+        except Exception:
+            _disk = {}
+        _disk = _disk if isinstance(_disk, dict) else {}
+        self.layout = apply_theme("classic" if _disk.get("dyn_removed") else _disk.get("ui_theme", "classic"))
         self.title(APP_NAME)
         self.geometry(f"{min(1480, max(1100, self.winfo_screenwidth() - 60))}x800")
         self._normal_geom = None
@@ -2115,8 +2241,6 @@ class App(tk.Tk):
             self.after(10, lambda: self.toggle_sidebar(True))
 
     def _side_drag(self, e):
-        if self.layout != "classic":
-            return
         w = e.x_root - self.side.winfo_rootx()
         if getattr(self, "side_collapsed", False):
             if w < SIDE_MIN:
@@ -2142,8 +2266,6 @@ class App(tk.Tk):
 
     def toggle_sidebar(self, collapse=None):
         """Thu gọn / mở rộng thanh bên trái (Ctrl+B)."""
-        if getattr(self, "layout", "classic") != "classic":
-            return
         if collapse is None:
             collapse = not getattr(self, "side_collapsed", False)
         self.side_collapsed = collapse
@@ -2873,6 +2995,8 @@ class App(tk.Tk):
             cards.columnconfigure(i, weight=1)
             self.stat_vars[key] = var
 
+        if self.layout == "dynamic":
+            self._build_dyn_deck(self.tab_scan)
         self._build_energy(self.tab_scan)
         bar = ttk.Frame(self.tab_scan, style="Card.TFrame")
         bar.pack(fill="x", pady=(12, 10))
@@ -4089,6 +4213,195 @@ class App(tk.Tk):
         self.top_upd.bind("<Button-1>", lambda e: self.check_update(silent=False))
         self.top_auto.bind("<Button-1>", lambda e: (self.select_page("settings"), self._settings_page("gen")))
         self.header_auto_text = ""
+        if not self.cfg.get("dyn_removed"):
+            self.top_theme = tk.Label(inner, text="◐  Giao diện", bg=C_CARD, fg=C_MUTED, font=(FONT, 10, "bold"),
+                                      padx=12, pady=6, cursor="hand2", highlightbackground=C_BORDER,
+                                      highlightthickness=1)
+            self.top_theme.pack(side="right", padx=(0, 10))
+            self.top_theme.bind("<Button-1>", lambda e: self._theme_menu(self.top_theme))
+        if self.layout == "dynamic":
+            self._build_dyn_header(parent)
+
+    # ================================================================ GIAO DIỆN ĐỘNG
+    def _build_dyn_header(self, parent):
+        """Dải điều khiển dưới thanh tiêu đề: hàng đèn LED trạng thái (trái) + đồng hồ số (phải)."""
+        deck = tk.Frame(parent, bg=C_CARD)
+        deck.pack(fill="x", side="top")
+        tk.Frame(parent, bg=C_BORDER, height=1).pack(fill="x", side="top")
+        deck_in = tk.Frame(deck, bg=C_CARD, padx=22, pady=6)
+        deck_in.pack(fill="x")
+        leds = tk.Frame(deck_in, bg=C_CARD)
+        leds.pack(side="left")
+        deck = deck_in
+        self.dyn_leds = {}
+        for i, (key, text, color) in enumerate((("pk", "PIKPAK", C_GREEN), ("rc", "RCLONE", C_GREEN),
+                                                ("auto", "TỰ QUÉT", C_ACCENT), ("run", "ĐANG CHẠY", C_ORANGE),
+                                                ("up", "SAVE", C_BLUE), ("err", "LỖI", C_RED))):
+            col = tk.Frame(leds, bg=C_CARD)
+            col.grid(row=0, column=i, padx=(0, 18))
+            led = Led(col, C_CARD, color, size=11)
+            led.pack(side="left")
+            tk.Label(col, text=text, bg=C_CARD, fg=C_MUTED, font=(FONT, 8, "bold")).pack(side="left", padx=(2, 0))
+            self.dyn_leds[key] = led
+        clk = tk.Frame(deck, bg=C_PANEL, highlightbackground=C_BORDER, highlightthickness=1, padx=10, pady=4)
+        clk.pack(side="right")
+        self.dyn_clock = SevenSeg(clk, C_PANEL, chars=8, h=24, on=C_ACCENT)
+        self.dyn_clock.pack(side="left")
+        self.dyn_date = tk.Label(clk, text="", bg=C_PANEL, fg=C_MUTED, font=(MONO, 9, "bold"), justify="left")
+        self.dyn_date.pack(side="left", padx=(10, 0))
+        self._dyn_step = 0
+        self._dyn_cache = {"rc": None, "rc_t": 0, "today": 0, "today_t": 0}
+        self.after(300, self._dyn_tick)
+
+    def _build_dyn_deck(self, parent):
+        """Bảng đồng hồ LED lớn ở tab Quét & Tải: % đang tải · tập xong hôm nay · danh sách đã có."""
+        deck = tk.Frame(parent, bg=C_PANEL, highlightbackground=C_BORDER, highlightthickness=1)
+        deck.pack(fill="x", pady=(12, 0))
+        inner = tk.Frame(deck, bg=C_PANEL, padx=16, pady=10)
+        inner.pack(fill="x")
+        self.dyn_big = {}
+        for i, (key, title, color) in enumerate((("pct", "ĐANG TẢI  %", C_ACCENT), ("speed", "TỐC ĐỘ  MB/s", C_GREEN),
+                                                ("today", "XONG HÔM NAY", C_ORANGE), ("owned", "ĐÃ CÓ", C_BLUE))):
+            box = tk.Frame(inner, bg=C_PANEL)
+            box.grid(row=0, column=i, sticky="w", padx=(0, 30))
+            inner.columnconfigure(i, weight=1)
+            tk.Label(box, text=title, bg=C_PANEL, fg=C_MUTED, font=(FONT, 8, "bold")).pack(anchor="w")
+            seg = SevenSeg(box, C_PANEL, chars=5 if key != "speed" else 6, h=38, on=color)
+            seg.pack(anchor="w", pady=(4, 0))
+            self.dyn_big[key] = seg
+        self.dyn_big["pct"].set("  0")
+        self.dyn_big["speed"].set("  0.0")
+
+    def _dyn_tick(self):
+        """Nhịp của giao diện động (~0.25 giây): đồng hồ, đèn LED nhấp nháy, vệt sáng thanh năng lượng."""
+        try:
+            if not self.winfo_exists():
+                return
+            self._dyn_step += 1
+            step = self._dyn_step
+            phase = (step // 2) % 2 == 0
+            now = dt.datetime.now()
+            self.dyn_clock.set(now.strftime("%H:%M:%S") if phase else now.strftime("%H %M %S"))
+            self.dyn_date.config(text=("THỨ " + "2345678"[now.weekday()] if now.weekday() < 6 else "CHỦ NHẬT") +
+                                 "\n" + now.strftime("%d/%m/%Y"))
+            c = self._dyn_cache
+            if time.time() - c["rc_t"] > 15:
+                c["rc"], c["rc_t"] = bool(find_rclone()), time.time()
+            busy = bool(self.worker and self.worker.is_alive())
+            ups = bool(getattr(self, "up_queued", None))
+            try:
+                err = bool(self.side_err.winfo_ismapped())
+            except (AttributeError, tk.TclError):
+                err = False
+            L = self.dyn_leds
+            pk = getattr(self, "pk_ok", None)
+            L["pk"].set(pk is True or pk is None, C_GREEN if pk is True else C_ORANGE, blink=pk is None)
+            L["rc"].set(c["rc"], C_GREEN)
+            L["auto"].set(bool(self.auto_var.get()))
+            L["run"].set(busy, blink=True)
+            L["up"].set(ups, blink=True)
+            L["err"].set(err, blink=True)
+            for led in L.values():
+                led.tick(phase)
+            for bar, _iv, _pv in getattr(self, "energy", {}).values():
+                bar.animate(step)
+            if getattr(self, "dyn_big", None):
+                if time.time() - c["today_t"] > 3:
+                    today = dt.date.today()
+                    c["today"] = sum(1 for h in self.history.values() if h.get("status") == STATUS_DONE and
+                                     h.get("done_ts") and dt.date.fromtimestamp(h["done_ts"]) == today)
+                    c["today_t"] = time.time()
+                self.dyn_big["pct"].set(f"{getattr(self, '_dl_pct', 0) if busy else 0:>3}")
+                sp = getattr(self, "_dl_speed", 0.0) if busy else 0.0
+                self.dyn_big["speed"].set(f"{sp:>5.1f}" if sp < 1000 else f"{sp:>5.0f}")
+                self.dyn_big["today"].set(f"{c['today']:>3}")
+                self.dyn_big["owned"].set(f"{len(self.owned):>5}"[-5:])
+        except Exception:
+            pass
+        self.after(250, self._dyn_tick)
+
+    def _theme_menu(self, widget):
+        m = tk.Menu(self, tearoff=0)
+        var = tk.StringVar(value=self.layout)
+        for key in ("classic", "dynamic"):
+            m.add_radiobutton(label=THEME_NAMES[key], variable=var, value=key,
+                              command=lambda k=key: self.switch_theme(k))
+        m.add_separator()
+        m.add_command(label="🗑  Xóa giao diện động...", command=self.remove_dynamic)
+        try:
+            m.tk_popup(widget.winfo_rootx(), widget.winfo_rooty() + widget.winfo_height() + 2)
+        finally:
+            m.grab_release()
+
+    def _restart_ui(self, msg):
+        if self.worker and self.worker.is_alive():
+            messagebox.showinfo(APP_NAME, "Tool đang quét / tải - đợi xong rồi đổi giao diện.")
+            return False
+        if not messagebox.askyesno(APP_NAME, msg + "\n\nTool sẽ tự khởi động lại (dữ liệu, cài đặt giữ nguyên)."):
+            return False
+        self.save_config()
+        self.save_history()
+        restart_self()
+        self.quit_app(force=True)
+        return True
+
+    def switch_theme(self, name):
+        if name not in THEMES or name == self.layout:
+            return
+        old = self.cfg.get("ui_theme")
+        self.cfg["ui_theme"] = name
+        if not self._restart_ui(f"Chuyển sang: {THEME_NAMES[name]}"):
+            self.cfg["ui_theme"] = old
+
+    def remove_dynamic(self):
+        """Xóa giao diện động: về giao diện gốc, ẩn nút ◐ Giao diện (khôi phục được ở Cài đặt > Chung)."""
+        old = (self.cfg.get("ui_theme"), self.cfg.get("dyn_removed"))
+        self.cfg["ui_theme"], self.cfg["dyn_removed"] = "classic", True
+        if self.layout == "classic":
+            if messagebox.askyesno(APP_NAME, "Xóa giao diện động? Nút ◐ Giao diện sẽ được ẩn đi.\n"
+                                             "(Khôi phục lại được ở Cài đặt → Chung → Giao diện.)"):
+                self.save_config()
+                try:
+                    self.top_theme.pack_forget()
+                except (AttributeError, tk.TclError):
+                    pass
+                self.log("🗑 Đã xóa giao diện động.")
+                self._settings_refresh_theme()
+            else:
+                self.cfg["ui_theme"], self.cfg["dyn_removed"] = old
+            return
+        if not self._restart_ui("Xóa giao diện động và quay về giao diện gốc?\n"
+                                "(Khôi phục lại được ở Cài đặt → Chung → Giao diện.)"):
+            self.cfg["ui_theme"], self.cfg["dyn_removed"] = old
+
+    def restore_dynamic(self):
+        self.cfg["dyn_removed"] = False
+        self.cfg["ui_theme"] = "dynamic"
+        if not self._restart_ui("Khôi phục và chuyển sang giao diện động?"):
+            self.cfg["ui_theme"] = "classic"
+            self.save_config()
+            self.log("◐ Đã khôi phục giao diện động - chọn bằng nút ◐ Giao diện sau khi mở lại tool.")
+
+    def _settings_refresh_theme(self):
+        try:
+            for w in self._theme_box.winfo_children():
+                w.destroy()
+            self._fill_theme_box(self._theme_box)
+        except (AttributeError, tk.TclError):
+            pass
+
+    def _fill_theme_box(self, fr):
+        if self.cfg.get("dyn_removed"):
+            ttk.Label(fr, text="Đang dùng giao diện gốc. Giao diện động đã bị xóa.", style="Muted.TLabel").pack(
+                side="left")
+            ttk.Button(fr, text="↺  Khôi phục giao diện động", command=self.restore_dynamic).pack(side="left", padx=10)
+            return
+        ttk.Label(fr, text="Đang dùng: " + THEME_NAMES[self.layout], style="Muted.TLabel").pack(side="left")
+        other = "dynamic" if self.layout == "classic" else "classic"
+        ttk.Button(fr, text="◐  Chuyển sang " + ("giao diện động" if other == "dynamic" else "giao diện gốc"),
+                   style="Accent.TButton", command=lambda: self.switch_theme(other)).pack(side="left", padx=10)
+        ttk.Button(fr, text="🗑  Xóa giao diện động", style="Danger.TButton", command=self.remove_dynamic).pack(
+            side="left")
 
     def select_page(self, key):
         self.page = key
@@ -4176,6 +4489,10 @@ class App(tk.Tk):
             iv.set(info if len(info) <= 60 else info[:57] + "...")
         if key == "dl":
             self._dl_pct = pct
+            m = re.search(r"([\d.]+)\s*([KMG])i?B/s", str(info or ""))
+            if m:
+                v = float(m.group(1)) * {"K": 1 / 1024, "M": 1, "G": 1024}[m.group(2)]
+                self._dl_speed = v
             self._energy_total()
 
     def _energy_total(self):
@@ -4695,6 +5012,11 @@ class App(tk.Tk):
 
         # ----- 1. Chung
         g = G(self._set_pages["gen"])
+        g.section("Giao diện", "Giao diện gốc (v1.3) luôn có, không xóa được. Giao diện động (nền tối, đèn LED, đồng "
+                               "hồ số, thanh năng lượng chạy) chọn bằng nút ◐ Giao diện hoặc ở đây; đổi xong tool tự "
+                               "khởi động lại.")
+        self._theme_box = g.frame()
+        self._fill_theme_box(self._theme_box)
         g.section("Tự động")
         fr = g.frame()
         ttk.Checkbutton(fr, text="Tự quét & tải mỗi", variable=self.auto_var, command=self._auto_changed).pack(side="left")

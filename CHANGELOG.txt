@@ -1,6 +1,16 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v1.4  (08/11/2026)
+  - Giữ nguyên mọi tính năng; giao diện v1.3 là GIAO DIỆN GỐC (luôn có, không xóa được).
+  - Thêm GIAO DIỆN ĐỘNG (nền tối, xanh neon):
+    · dải đèn LED trạng thái: PikPak · rclone · Tự quét · Đang chạy · Save · Lỗi (nhấp nháy khi đang hoạt động);
+    · đồng hồ số LED 7 đoạn (giờ:phút:giây, dấu : nhấp nháy) + thứ, ngày;
+    · bảng số LED lớn ở tab Quét & Tải: % đang tải · tốc độ MB/s · tập xong hôm nay · danh sách đã có;
+    · thanh năng lượng có vệt sáng chạy khi đang tải.
+  - Nút "◐ Giao diện" trên thanh tiêu đề (và Cài đặt > Chung > Giao diện): chọn giao diện gốc / động,
+    và "🗑 Xóa giao diện động" (về giao diện gốc, ẩn nút; khôi phục lại được ở Cài đặt > Chung).
+
 v1.3  (07/11/2026)
   - Mỗi tập tải về HDD xong tự copy thêm 1 bản vào thư mục chung COPY_TO_IPHONE
     (mặc định C:\Users\<tên>\Downloads\Video\COPY_TO_IPHONE, không chia thư mục con).
