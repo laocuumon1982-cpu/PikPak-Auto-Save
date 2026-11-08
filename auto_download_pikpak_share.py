@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v1.7 by Duy Anh
+PikPak Auto Save v1.8 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -42,7 +42,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v1.7 by Duy Anh"
+APP_VERSION = "v1.8 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -202,6 +202,24 @@ MONO = "Consolas"             # số liệu kiểu màn hình máy
 
 ICON64 = "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"
 ICON28 = "iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAFbklEQVR42pWW+4ucZxXHP+e8l5md2dlEWVq00BRjQ1NErD8YElutiUIsJIEtK9SiSL1A9gcNaERQXFbFC80PFewu7T+gNCYiipdSCaQlodVCqYSK9Ubxlq5pNjvZmX3feZ5z/OGdmZ29JGEfeN4fXs5zvuec77kJuMzOInNzYge+5Q95aifc2IfTwgERYTvH3RFAaIvyogR94sI35Vezs65zc7hMT3ty+rTE/bO9+aSWHncHCw7msD2oEVBABU0FEYhFWLg4l81MT3siAPu/UczXWvnxst2zvrDeSqcMP+B+AyFzQyBvZVq0y4WL36nNyP1f7x7WrP7rWPYCeMIt/BIREoUQnWiVcJoKApg5vqW/EpM8S623+vGUKCdFcIlR5CZ8uUOiUPacdgE7mzBRF8zhyrJhDuNjlZyvt1rcTSRkTpSTqUTb51aIuic38yxR6HScyR3CZw+lHHpfwttbgplz6Q3n9POBi69Farmg0udxGH5PvCwQt33y4S93Hbetw6eVparQ7sB736V877Eakzu2DsTPLwS+/5OSWj6SPBsUphKCIyLDOPSFkgS6XacXqoS9Y1I59YUaO5qyKdSDMB47kLLUduZ/VtBqCjGO6BTAg6diLhtNUYXla86eOxOO3Z+x6x0Jd0wKO5rCsy8U/PLcKgBHD9b56AdruINKZdgjB1POniu42jZqGcSwjlBJJfomrtrLztSDOV/8RJ1GXdZ586/LxvN/KAG47958+F8V3CDPhCP7M5462yVtCokKNsKYSjQGN3Gju2Lcd7fytU+P0agLIYIZhAAikGfQagqtppBnbIqMO3zuWI0nT44znkMojMTWMFTNGd7oeDAeO1oHIEZIk0qRjBS5WXW3KniR6t0H3pPylU81CIUhoxhDZDNCYdw2AXvuSocWD060SpH5aCOp/kXb7Gk0eOD9GffsUoqOod7HkegMLtFJcJItGlueVZk7VpNhZo7VhCRhU2hF1vLk9p1CLA3tY6QyYnIusPSW8Z/Lkd27UswqkOXrztlnu6SJ8OqfeuRZ1cp+/2rJauGE4Dx8eIyJ8cqY0X61uBjJcCSC+BZJU3aNn/5iBZHKixih2RA6XefbT7Z5+VJV2HkOL18q+cFTbRavGs1GlY0DDlXhhZcK/vx6SSOrcqMf0jVA6xkTY/Db51b4zXMd0rTqNgAzjzaZ+WST7mqlVAVWV+HIoTpf/fz4Gtexisq1ZeNHTy+RizOKsakOMWe8Bqd+eBWLzuGPNYecfukzTf79P+OlV0pUnHv3ZMydmBjW7+C8uRj57qmrXFkMNBtCDGucypGpf/rG2Sn9wV2WsHt3xtt2Km6Vt92u88f/Ki7CXROBd04mhOhD3szgr3/rsXTNaIxV7W2UUzl67A2/4YRIhNXCiaGa/oMRlY+nuAp2vUfZbwjD7ihVt0lStpwJqUTbkFdrD1euR1RhXZUYrL5VVmNVIdnw0gw0FQiC+OapmqqJuNu6iakC3Y4zNTXBAw+OY+ao3nzBcXNEhX/8veTp+SvIRjQHEZWUGFYUbVagMpyD3jN23Zlzz97atgBrOaQ4NjL1cEdEccKKTB16/Xdp2vhIL3RMRJJRi0KE1oRua2HrrBhuVBz6cHOMWdrQEDrn0iTwuKocTFzcbY1PEcgVOkthW4CaVKuhD0vBXUVdTSQJPC4AD3/otflGfvvxbvmm9ZuhymBUi2zaim64i1b1hA/eepWnY/lt2ikvL5w5v3dGp6efSc6c3ztTFIsLuTQ0o64aQWKsmnq/JUm4xR3IREdjRCNk1DWXhhbF4sKZ83tnpqefSWR01X/kwF8eAk4YYZ9Aq2/gdvdvrxKEtpK+CDzx4wvvHq76/wcfdelN5/BKZQAAAABJRU5ErkJggg=="
+
+def resolve_iphone_dir(value):
+    """Thư mục COPY_TO_IPHONE thật trên máy này. Đường dẫn nằm trong thư mục người dùng KHÁC
+    (VD C:\\Users\\Duy Anh\\... chép Data từ máy khác sang máy dùng tài khoản Admin) -> đổi sang thư mục
+    người dùng hiện tại (C:\\Users\\Admin\\...)."""
+    d = os.path.normpath(from_portable(str(value or "").strip())) if str(value or "").strip() else ""
+    if not d:
+        return default_iphone_dir()
+    home = os.path.normpath(os.path.expanduser("~"))
+    users = os.path.dirname(home)                            # C:\\Users
+    if os.path.normcase(d).startswith(os.path.normcase(users) + os.sep):
+        rest = d[len(users) + 1:]
+        owner, _, sub = rest.partition(os.sep)
+        if owner and os.path.normcase(os.path.join(users, owner)) != os.path.normcase(home) and \
+                owner.lower() not in ("public", "default", "all users"):
+            return os.path.join(home, sub) if sub else home
+    return d
+
 
 def default_iphone_dir():
     return os.path.join(os.path.expanduser("~"), "Downloads", "Video", "COPY_TO_IPHONE")
@@ -3451,6 +3469,15 @@ class App(tk.Tk):
         self.q.put(("progress", 0, len(items)))
         ok_names, bad = [], 0
         failed = []
+        if self.cfg.get("iphone_on", True):
+            ipd = resolve_iphone_dir(self.cfg.get("iphone_dir"))
+            try:
+                os.makedirs(ipd, exist_ok=True)
+                self.log(f"📱 Sẽ copy thêm 1 bản vào: {ipd}")
+            except OSError as e:
+                self.log(f"⚠ Không tạo được thư mục COPY_TO_IPHONE {ipd}: {e}")
+        else:
+            self.log("📱 Copy vào COPY_TO_IPHONE đang TẮT (Cài đặt → Chung).")
 
         def run(item):
             try:
@@ -3743,13 +3770,14 @@ class App(tk.Tk):
         """Copy thêm 1 bản từ HDD vào thư mục chung COPY_TO_IPHONE. Lỗi chỉ báo, không làm hỏng tập đã tải."""
         if not self.cfg.get("iphone_on", True) or self.stop_flag.is_set() or not src or not os.path.isfile(src):
             return
-        d = from_portable(self.cfg.get("iphone_dir") or "") or default_iphone_dir()
+        d = resolve_iphone_dir(self.cfg.get("iphone_dir"))
         dst = os.path.join(d, safe_name(name))
         try:
             if os.path.normcase(os.path.abspath(dst)) == os.path.normcase(os.path.abspath(src)):
                 return
             os.makedirs(d, exist_ok=True)
             if os.path.isfile(dst) and os.path.getsize(dst) == os.path.getsize(src):
+                self.log(f"📱 [{name}] Đã có sẵn trong COPY_TO_IPHONE.")
                 return                             # đã có sẵn
             self.q.put(("rowstatus", fcode, "📱  Đang copy vào COPY_TO_IPHONE...", "dl"))
             self.q.put(("energy", "dl", 0, f"📱 {name}"))
@@ -3762,6 +3790,47 @@ class App(tk.Tk):
             self.log(f"⚠ [{name}] Copy vào COPY_TO_IPHONE lỗi: {e}")
             self.report_error(f"Copy vào COPY_TO_IPHONE lỗi: {name}", str(e), item=item,
                               exc=e if not isinstance(e, OSError) else None)
+
+    def iphone_catch_up(self):
+        """Copy bù vào COPY_TO_IPHONE các tập đã tải về HDD trong N ngày gần đây mà chưa có ở đó."""
+        self.save_config()
+        d = resolve_iphone_dir(self.cfg.get("iphone_dir"))
+        days = 7
+        cut = time.time() - days * 86400
+        todo = []
+        for h in self.history.values():
+            src = h.get("hdd") or h.get("path") or ""
+            if h.get("status") != STATUS_DONE or (h.get("done_ts") or 0) < cut or not src or not os.path.isfile(src):
+                continue
+            dst = os.path.join(d, safe_name(h.get("name") or os.path.basename(src)))
+            if os.path.isfile(dst) and os.path.getsize(dst) == os.path.getsize(src):
+                continue
+            todo.append((src, dst))
+        if not todo:
+            messagebox.showinfo(APP_NAME, f"Các tập tải trong {days} ngày gần đây đều đã có trong:\n{d}")
+            return
+        total = sum(os.path.getsize(a) for a, _b in todo)
+        if not messagebox.askyesno(APP_NAME, f"Copy {len(todo)} tập ({human_size(total)}) đã tải trong {days} ngày "
+                                             f"gần đây vào:\n{d} ?"):
+            return
+
+        def job():
+            os.makedirs(d, exist_ok=True)
+            ok_n = 0
+            for i, (a, b) in enumerate(todo, 1):
+                self.q.put(("status", f"📱 Copy vào COPY_TO_IPHONE {i}/{len(todo)}: {os.path.basename(a)}"))
+                try:
+                    ok, msg = copy_with_progress(a, b, lambda p, sp="", n=os.path.basename(a): self.q.put(
+                        ("energy", "dl", p, f"📱 {n}   {sp}")), None, chunk=16 << 20)
+                    if ok:
+                        ok_n += 1
+                        self.log(f"📱 Đã copy vào COPY_TO_IPHONE: {b}")
+                    else:
+                        self.log(f"⚠ Copy vào COPY_TO_IPHONE lỗi: {os.path.basename(a)}: {msg}")
+                except Exception as e:
+                    self.log(f"⚠ Copy vào COPY_TO_IPHONE lỗi: {os.path.basename(a)}: {e}")
+            self.q.put(("status", f"📱 Xong: đã copy {ok_n}/{len(todo)} tập vào COPY_TO_IPHONE."))
+        threading.Thread(target=job, daemon=True).start()
 
     def _browse_iphone(self):
         cur = self.iphone_dir_var.get().strip()
@@ -4904,7 +4973,7 @@ class App(tk.Tk):
         self.rdexe_var = tk.StringVar(value=self.cfg.get("raidrive_exe", "") or "")
         self.share_root_var = tk.StringVar(value=self.cfg.get("share_root", "") or "")
         self.iphone_on_var = tk.BooleanVar(value=bool(self.cfg.get("iphone_on", True)))
-        self.iphone_dir_var = tk.StringVar(value=self.cfg.get("iphone_dir") or default_iphone_dir())
+        self.iphone_dir_var = tk.StringVar(value=resolve_iphone_dir(self.cfg.get("iphone_dir")))
         self.thr_var = tk.IntVar(value=int(self.cfg.get("copy_threads", 4) or 4))
         self.rdmin_var = tk.IntVar(value=int(self.cfg.get("rd_check_min", 2) or 0))
         self.map_status = tk.StringVar(value="")
@@ -5059,6 +5128,12 @@ class App(tk.Tk):
                 hint="Link thư mục PikPak được chia sẻ cho bạn. Khi thêm thư mục phim, bấm \"Chọn trong link chia "
                      "sẻ...\" để chọn thư mục con từ link này. Có mật khẩu: thêm ?pwd=xxxx vào cuối link.")
         g.check("Copy thêm 1 bản vào thư mục COPY_TO_IPHONE (mọi phim chung 1 thư mục)", self.iphone_on_var)
+        fr_ip = g.frame()
+        ttk.Button(fr_ip, text="📱  Copy các tập đã tải gần đây vào COPY_TO_IPHONE...",
+                   command=self.iphone_catch_up).pack(side="left")
+        ttk.Button(fr_ip, text="↗  Mở thư mục", command=lambda: (
+            os.makedirs(resolve_iphone_dir(self.iphone_dir_var.get()), exist_ok=True),
+            open_target(resolve_iphone_dir(self.iphone_dir_var.get())))).pack(side="left", padx=8)
         g.entry("Thư mục COPY_TO_IPHONE", self.iphone_dir_var, self._browse_iphone,
                 hint="Mỗi tập tải về HDD xong được copy thêm 1 bản vào đây (không chia thư mục con) để chép sang "
                      "iPhone. File ở đây bạn tự xóa sau khi chép - tool không tải lại.")
@@ -6390,7 +6465,7 @@ class App(tk.Tk):
             self.cfg["raidrive_exe"] = self.rdexe_var.get().strip()
             self.cfg["share_root"] = self.share_root_var.get().strip()
             self.cfg["iphone_on"] = self.iphone_on_var.get()
-            self.cfg["iphone_dir"] = self.iphone_dir_var.get().strip() or default_iphone_dir()
+            self.cfg["iphone_dir"] = resolve_iphone_dir(self.iphone_dir_var.get())
             self.cfg["copy_threads"] = 1
             try:
                 self.cfg["rd_check_min"] = max(0, int(self.rdmin_var.get()))

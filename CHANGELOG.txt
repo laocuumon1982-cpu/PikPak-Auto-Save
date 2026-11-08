@@ -1,6 +1,14 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v1.8  (08/11/2026)
+  - Sửa lỗi không copy vào COPY_TO_IPHONE khi thư mục Data chép từ máy khác (VD đường dẫn lưu là
+    C:\Users\Duy Anh\... nhưng máy đang dùng tài khoản Admin): tool tự đổi sang thư mục của tài khoản
+    đang dùng (C:\Users\Admin\Downloads\Video\COPY_TO_IPHONE).
+  - Nhật ký ghi rõ lúc bắt đầu tải: copy vào thư mục nào / đang tắt; tập đã có sẵn cũng ghi lại.
+  - Nút mới ở Cài đặt > Chung: "📱 Copy các tập đã tải gần đây vào COPY_TO_IPHONE..." (copy bù các tập tải
+    trong 7 ngày qua chưa có ở đó) và "↗ Mở thư mục".
+
 v1.7  (08/11/2026)
   - Mật khẩu admin: tab Thư mục phim và Cài đặt phải nhập mật khẩu mới mở được (tránh bấm nhầm).
     Lần đầu bấm vào 2 tab này tool hỏi tạo mật khẩu. Mở khóa 1 lần dùng đến khi bấm "🔒 Khóa lại"
