@@ -1,6 +1,14 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v1.7  (08/11/2026)
+  - Mật khẩu admin: tab Thư mục phim và Cài đặt phải nhập mật khẩu mới mở được (tránh bấm nhầm).
+    Lần đầu bấm vào 2 tab này tool hỏi tạo mật khẩu. Mở khóa 1 lần dùng đến khi bấm "🔒 Khóa lại"
+    (nút trên thanh tiêu đề) hoặc tự khóa sau 10 phút không thao tác (đổi ở Cài đặt > Chung > Mật khẩu admin).
+    Mật khẩu chỉ lưu dạng mã băm trong Data\config.json, không ghi vào báo cáo lỗi.
+  - Giao diện mới: thanh bên trái màu xanh da trời nhạt, chữ đen đậm, cỡ chữ lớn hơn cho dễ đọc
+    (mục đang chọn vẫn có vạch xanh lá).
+
 v1.6  (08/11/2026)
   - Bỏ hẳn giao diện Động và Dashboard (đang dùng 2 giao diện này thì tự về giao diện gốc).
   - Thêm GIAO DIỆN MỚI: nội dung nền trắng, nút chính màu đỏ, thanh bên trái màu cam nhạt,

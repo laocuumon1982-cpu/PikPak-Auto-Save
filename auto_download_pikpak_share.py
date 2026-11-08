@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v1.6 by Duy Anh
+PikPak Auto Save v1.7 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -9,6 +9,7 @@ Chạy:  python auto_download_pikpak_share.py          (mở giao diện)
        python auto_download_pikpak_share.py --auto   (mở giao diện và tự Quét & Tải ngay)
 """
 import datetime as dt
+import hashlib
 import json
 import os
 import queue
@@ -41,7 +42,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v1.6 by Duy Anh"
+APP_VERSION = "v1.7 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -153,6 +154,8 @@ C_STAT1 = "#14b8a6"           # màu ô "Thư mục sẽ quét"
 # ----- giao diện: "classic" = giao diện GỐC (v1.3, không xóa được) · "fresh" = giao diện MỚI (nền trắng, nút đỏ,
 #       thanh bên cam nhạt, mục đang chọn vạch xanh lá) - chọn bằng nút "◐ Giao diện", xóa được ở Cài đặt > Chung.
 C_SIDE_SEL_TEXT = "#ffffff"   # chữ mục đang chọn ở thanh bên
+SIDE_FONT_ADD = 0             # cộng thêm cỡ chữ ở thanh bên
+SIDE_BOLD = False             # chữ thanh bên in đậm hết
 C_SIDE_BRAND = "#ffffff"      # tên tool ở thanh bên
 THEMES = {
     "classic": {},
@@ -163,20 +166,21 @@ THEMES = {
         "C_ODD": "#fbfbfb", "C_TEXT": "#262626", "C_MUTED": "#71717a", "C_BORDER": "#e4e4e7",
         "C_GREEN": "#16a34a", "C_ORANGE": "#ea580c", "C_RED": "#dc2626", "C_BLUE": "#2563eb",
         "C_WARN_BG": "#fff7ed",
-        "C_SIDE": "#fde6cf", "C_SIDE_CARD": "#fcd8b5", "C_SIDE_HOVER": "#fbcb9c", "C_SIDE_ACTIVE": "#16a34a",
-        "C_SIDE_TEXT": "#4a2c14", "C_SIDE_MUTED": "#9a6b45", "C_SIDE_SEL_TEXT": "#1f1208", "C_SIDE_BRAND": "#7c2d12",
+        "C_SIDE": "#dcefff", "C_SIDE_CARD": "#c7e4fc", "C_SIDE_HOVER": "#b2d8f8", "C_SIDE_ACTIVE": "#16a34a",
+        "C_SIDE_TEXT": "#000000", "C_SIDE_MUTED": "#1e293b", "C_SIDE_SEL_TEXT": "#000000", "C_SIDE_BRAND": "#000000",
+        "SIDE_FONT_ADD": 2, "SIDE_BOLD": True,
         "C_BTN_HOVER": "#fef2f2", "C_DIS_TEXT": "#b4b4bb",
         "C_DANGER_BG": "#fdecec", "C_DANGER_BORDER": "#f5c2c2", "C_DANGER_HOVER": "#fadada", "C_DANGER_DIS": "#e8a9a9",
         "C_TROUGH": "#ececee", "C_SCROLL_ACT": "#d4d4d8", "C_SKIP": "#a1a1aa",
-        "C_SIDE_OK": "#15803d", "C_SIDE_BAD": "#b91c1c", "C_ERR_BG": "#dc2626", "C_ERR_FG": "#ffffff",
-        "C_FOOT": "#b0815a", "C_LOG_BG": "#1f1d1d", "C_LOG_FG": "#d9f99d", "C_CHECK_BORDER": "#c8c8ce",
+        "C_SIDE_OK": "#166534", "C_SIDE_BAD": "#b91c1c", "C_ERR_BG": "#dc2626", "C_ERR_FG": "#ffffff",
+        "C_FOOT": "#334155", "C_LOG_BG": "#1f1d1d", "C_LOG_FG": "#d9f99d", "C_CHECK_BORDER": "#c8c8ce",
         "C_GLYPH": "#e4e4e7", "ENERGY_EMPTY": "#ececee",
         "ENERGY_COLORS": ("#f87171", "#ef4444", "#dc2626", "#ea580c", "#f59e0b", "#16a34a"),
         "C_STAT1": "#ea580c",
     },
 }
 THEME_NAMES = {"classic": "Giao diện gốc  (v1.3)",
-               "fresh": "Giao diện mới  (nền trắng · nút đỏ · thanh bên cam nhạt)"}
+               "fresh": "Giao diện mới  (nền trắng · nút đỏ · thanh bên xanh da trời nhạt)"}
 THEME_SHORT = {"classic": "giao diện gốc", "fresh": "giao diện mới"}
 
 
@@ -245,6 +249,7 @@ DEFAULT_CONFIG = {
     "rd_autostart": False,
     "raidrive_exe": "",           # đường dẫn RaiDrive.exe (trống = tự tìm)
     "rd_to_tray": False,
+    "admin_lock_min": 10,         # tự khóa tab Thư mục phim / Cài đặt sau N phút không thao tác (0 = không)
     "iphone_on": True,            # copy thêm 1 bản vào thư mục chung COPY_TO_IPHONE
     "iphone_dir": default_iphone_dir(),
     "folders": [],
@@ -1830,7 +1835,12 @@ class App(tk.Tk):
         self._build_folders()
         self._build_settings()
         self._build_history()
-        self.select_page("folders" if not any(f.get("reviewed") for f in self.cfg["folders"]) else "scan")
+        self.page = None
+        self._admin_until, self._admin_last = 0.0, time.time()
+        self.select_page("folders" if not any(f.get("reviewed") for f in self.cfg["folders"]) else "scan", ask=False)
+        for seq in ("<Any-KeyPress>", "<Any-ButtonPress>"):
+            self.bind_all(seq, self._admin_activity, add="+")
+        self.after(20000, self._admin_tick)
         if self.cfg.get("last_summary"):
             self._set_last(self.cfg["last_summary"])
         self.update_stats()
@@ -2046,6 +2056,8 @@ class App(tk.Tk):
             pass
 
     def _build_sidebar(self, parent):
+        def SF(n, bold=False):          # cỡ chữ thanh bên (giao diện mới: to hơn, in đậm)
+            return (FONT, n + SIDE_FONT_ADD, "bold" if (bold or SIDE_BOLD) else "normal")
         self.side_w = max(SIDE_MIN, min(SIDE_MAX, int(self.cfg.get("side_w", SIDE_W) or SIDE_W)))
         side = tk.Frame(parent, bg=C_SIDE, width=self.side_w)
         side.pack(side="left", fill="y")
@@ -2062,10 +2074,10 @@ class App(tk.Tk):
             tk.Label(self.side_brand, image=self.icon_small, bg=C_SIDE).pack(side="left", padx=(0, 10))
         bt = tk.Frame(self.side_brand, bg=C_SIDE)
         bt.pack(side="left")
-        tk.Label(bt, text=APP_TITLE.upper(), bg=C_SIDE, fg=C_SIDE_BRAND, font=(FONT, 11, "bold")).pack(anchor="w")
+        tk.Label(bt, text=APP_TITLE.upper(), bg=C_SIDE, fg=C_SIDE_BRAND, font=SF(11, True)).pack(anchor="w")
         tk.Label(bt, text=APP_VERSION, bg=C_SIDE,
-                 fg=C_SIDE_MUTED, font=(FONT, 8)).pack(anchor="w")
-        self.side_toggle = tk.Label(top, text="«", bg=C_SIDE, fg=C_SIDE_TEXT, font=(FONT, 15, "bold"),
+                 fg=C_SIDE_MUTED, font=SF(8)).pack(anchor="w")
+        self.side_toggle = tk.Label(top, text="«", bg=C_SIDE, fg=C_SIDE_TEXT, font=SF(15, True),
                                     cursor="hand2", padx=8)
         self.side_toggle.pack(side="right")
         self.side_toggle.bind("<Button-1>", lambda e: self.toggle_sidebar())
@@ -2074,7 +2086,7 @@ class App(tk.Tk):
         self.bind_all("<Control-b>", lambda e: self.toggle_sidebar())
         tk.Frame(side, bg=C_SIDE_HOVER, height=1).pack(fill="x", padx=14, pady=(0, 8))
 
-        self.side_menu_lbl = tk.Label(side, text="MENU", bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 8, "bold"))
+        self.side_menu_lbl = tk.Label(side, text="MENU", bg=C_SIDE, fg=C_SIDE_MUTED, font=SF(8, True))
         self.side_menu_lbl.pack(anchor="w", padx=24, pady=(4, 4))
         self.nav = {}
         items = (("folders", "▦", "Thư mục phim", self.tab_folders),
@@ -2086,9 +2098,9 @@ class App(tk.Tk):
             row.pack(fill="x", padx=12, pady=2)
             bar = tk.Frame(row, bg=C_SIDE, width=3)
             bar.pack(side="left", fill="y")
-            ic = tk.Label(row, text=icon, bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 13), width=2)
+            ic = tk.Label(row, text=icon, bg=C_SIDE, fg=C_SIDE_MUTED, font=SF(13), width=2)
             ic.pack(side="left", padx=(10, 8), pady=10)
-            lb = tk.Label(row, text=text, bg=C_SIDE, fg=C_SIDE_TEXT, font=(FONT, 11, "bold"))
+            lb = tk.Label(row, text=text, bg=C_SIDE, fg=C_SIDE_TEXT, font=SF(11, True))
             lb.pack(side="left")
             badge = tk.Label(row, text="", bg=C_ACCENT, fg=C_ON_ACCENT, font=(MONO, 9, "bold"), padx=7)
             self.nav[key] = {"row": row, "bar": bar, "icon": ic, "label": lb, "badge": badge, "frame": frame}
@@ -2101,11 +2113,11 @@ class App(tk.Tk):
         def card(parent_, title, **pack):
             outer = tk.Frame(parent_, bg=C_SIDE_CARD, padx=14, pady=10)
             outer.pack(fill="x", **pack)
-            tk.Label(outer, text=title, bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 8, "bold")).pack(anchor="w")
+            tk.Label(outer, text=title, bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=SF(8, True)).pack(anchor="w")
             return outer
 
         self.side_lib = card(side, "THƯ VIỆN", padx=14, pady=(16, 0))
-        self.side_owned = tk.Label(self.side_lib, text="", bg=C_SIDE_CARD, fg=C_SIDE_OK, font=(FONT, 10),
+        self.side_owned = tk.Label(self.side_lib, text="", bg=C_SIDE_CARD, fg=C_SIDE_OK, font=SF(10),
                                    anchor="w", justify="left", wraplength=W)
         self.side_owned.pack(fill="x", pady=(4, 0))
 
@@ -2117,40 +2129,40 @@ class App(tk.Tk):
         r.pack(fill="x", pady=(6, 2))
         tk.Checkbutton(r, text="Tự quét mỗi", variable=self.auto_var, command=self._auto_changed,
                        bg=C_SIDE_CARD, fg=C_SIDE_TEXT, selectcolor=C_SIDE_HOVER, activebackground=C_SIDE_CARD,
-                       activeforeground=C_TEXT, font=(FONT, 10), bd=0, highlightthickness=0).pack(side="left")
+                       activeforeground=C_TEXT, font=SF(10), bd=0, highlightthickness=0).pack(side="left")
         cb = ttk.Combobox(r, textvariable=self.interval_var, values=INTERVAL_CHOICES, width=4, state="readonly")
         cb.pack(side="left", padx=6)
         cb.bind("<<ComboboxSelected>>", lambda e: self._auto_changed())
-        tk.Label(r, text="phút", bg=C_SIDE_CARD, fg=C_SIDE_TEXT, font=(FONT, 10)).pack(side="left")
-        self.side_auto = tk.Label(ca, text="", bg=C_SIDE_CARD, fg=C_SIDE_ACTIVE, font=(FONT, 10), anchor="w")
+        tk.Label(r, text="phút", bg=C_SIDE_CARD, fg=C_SIDE_TEXT, font=SF(10)).pack(side="left")
+        self.side_auto = tk.Label(ca, text="", bg=C_SIDE_CARD, fg=C_SIDE_ACTIVE, font=SF(10), anchor="w")
         self.side_auto.pack(fill="x", pady=(4, 0))
-        self.side_last = tk.Label(ca, text="Chưa quét lần nào", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 9),
+        self.side_last = tk.Label(ca, text="Chưa quét lần nào", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=SF(9),
                                   anchor="w", justify="left", wraplength=W)
         self.side_last.pack(fill="x", pady=(2, 0))
 
         ck = card(bottom, "KẾT NỐI", pady=(0, 10))
         self.side_rd = tk.Label(ck, text="▣ RaiDrive: đang kiểm tra...", bg=C_SIDE_CARD, fg=C_SIDE_MUTED,
-                                font=(FONT, 10), anchor="w", justify="left", wraplength=W, cursor="hand2")
+                                font=SF(10), anchor="w", justify="left", wraplength=W, cursor="hand2")
         self.side_rd.bind("<Button-1>", lambda e: (self.select_page("settings"), self._settings_page("raidrive")))
         self.side_pk = tk.Label(ck, text="☁ PikPak: đang kiểm tra...", bg=C_SIDE_CARD, fg=C_SIDE_MUTED,
-                                font=(FONT, 10), anchor="w", justify="left", wraplength=W, cursor="hand2")
+                                font=SF(10), anchor="w", justify="left", wraplength=W, cursor="hand2")
         self.side_pk.pack(fill="x")
         self.side_pk.bind("<Button-1>", lambda e: self.get_rclone() if not find_rclone() else (
             self.select_page("settings"), self._settings_page("pikpak")))
-        self.side_bk = tk.Label(ck, text="", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 9), anchor="w",
+        self.side_bk = tk.Label(ck, text="", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=SF(9), anchor="w",
                                 justify="left", wraplength=W)
         self.side_bk.pack(fill="x")
-        self.side_err = tk.Label(ck, text="", bg=C_ERR_BG, fg=C_ERR_FG, font=(FONT, 9, "bold"), anchor="w",
+        self.side_err = tk.Label(ck, text="", bg=C_ERR_BG, fg=C_ERR_FG, font=SF(9, True), anchor="w",
                                  justify="left", wraplength=W, cursor="hand2", padx=6, pady=4)
         self.side_err.bind("<Button-1>", self.copy_last_report)
-        self.side_health = tk.Label(ck, text="", bg=C_SIDE_CARD, fg=C_SIDE_BAD, font=(FONT, 9, "bold"), anchor="w",
+        self.side_health = tk.Label(ck, text="", bg=C_SIDE_CARD, fg=C_SIDE_BAD, font=SF(9, True), anchor="w",
                                     justify="left", wraplength=W)
         if self.cfg.get("last_backup"):
             self.side_bk.config(text="⟲ Sao lưu: " + self.cfg["last_backup"])
-        tk.Label(ck, text=f"⌂ Máy: {MACHINE}", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 9),
+        tk.Label(ck, text=f"⌂ Máy: {MACHINE}", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=SF(9),
                  anchor="w").pack(fill="x", pady=(2, 0))
         self.side_foot = tk.Label(bottom, text="",
-                                  bg=C_SIDE, fg=C_FOOT, font=(FONT, 8), anchor="w", justify="left", wraplength=W)
+                                  bg=C_SIDE, fg=C_FOOT, font=SF(8), anchor="w", justify="left", wraplength=W)
         self._side_wraps = [self.side_rd, self.side_owned, self.side_last, self.side_pk, self.side_bk, self.side_foot, self.side_health, self.side_err]
         # vạch kéo đổi độ rộng thanh bên
         grip = tk.Frame(parent, bg=C_BORDER, width=5, cursor="sb_h_double_arrow")
@@ -3536,7 +3548,7 @@ class App(tk.Tk):
             d.mkdir(parents=True, exist_ok=True)
             path = d / f"BaoLoi_{dt.datetime.now():%Y%m%d_%H%M%S}_{len(times):02d}.txt"
             cfg = json.loads(json.dumps(self.cfg))
-            for k in ("pikpak_pass", "profiles", "window"):
+            for k in ("pikpak_pass", "admin_hash", "admin_salt", "profiles", "window"):
                 cfg.pop(k, None)
             if cfg.get("pikpak_user"):
                 u = cfg["pikpak_user"]
@@ -4135,12 +4147,150 @@ class App(tk.Tk):
         self.top_upd.bind("<Button-1>", lambda e: self.check_update(silent=False))
         self.top_auto.bind("<Button-1>", lambda e: (self.select_page("settings"), self._settings_page("gen")))
         self.header_auto_text = ""
+        self.top_lock = tk.Label(inner, text="🔒  Đã khóa", bg=C_CARD, fg=C_MUTED, font=(FONT, 10, "bold"), padx=12,
+                                 pady=6, cursor="hand2", highlightbackground=C_BORDER, highlightthickness=1)
+        self.top_lock.pack(side="right", padx=(0, 10))
+        self.top_lock.bind("<Button-1>", lambda e: self.admin_lock() if self.admin_is_unlocked() else (
+            self.admin_unlock() and self.status_var.set("🔓 Đã mở khóa tab Thư mục phim / Cài đặt.")))
         if len(removed_themes(self.cfg)) < len(THEMES) - 1:
             self.top_theme = tk.Label(inner, text="◐  Giao diện", bg=C_CARD, fg=C_MUTED, font=(FONT, 10, "bold"),
                                       padx=12, pady=6, cursor="hand2", highlightbackground=C_BORDER,
                                       highlightthickness=1)
             self.top_theme.pack(side="right", padx=(0, 10))
             self.top_theme.bind("<Button-1>", lambda e: self._theme_menu(self.top_theme))
+
+    # ================================================================ MẬT KHẨU ADMIN
+    @staticmethod
+    def _pw_hash(pw, salt):
+        return hashlib.sha256((salt + "|" + pw).encode("utf-8")).hexdigest()
+
+    def admin_is_unlocked(self):
+        return getattr(self, "_admin_until", 0) > 0
+
+    def _admin_activity(self, _e=None):
+        self._admin_last = time.time()
+
+    def _admin_tick(self):
+        """Tự khóa lại sau N phút không thao tác."""
+        try:
+            mins = int(self.cfg.get("admin_lock_min", 10) or 0)
+            if self.admin_is_unlocked() and mins > 0 and time.time() - self._admin_last > mins * 60:
+                self.admin_lock(f"🔒 Tự khóa sau {mins} phút không thao tác.")
+        except Exception:
+            pass
+        self.after(20000, self._admin_tick)
+
+    def _pw_dialog(self, title, prompt, confirm=False):
+        """Hộp nhập mật khẩu (ẩn ký tự). confirm=True: nhập 2 lần. Trả về chuỗi hoặc None."""
+        win = tk.Toplevel(self)
+        win.title(title)
+        win.configure(bg=C_CARD)
+        win.transient(self)
+        win.resizable(False, False)
+        body = tk.Frame(win, bg=C_CARD, padx=20, pady=16)
+        body.pack(fill="both", expand=True)
+        tk.Label(body, text="🔒  " + prompt, bg=C_CARD, fg=C_TEXT, font=(FONT, 10, "bold"), justify="left",
+                 wraplength=360).pack(anchor="w")
+        v1, v2 = tk.StringVar(), tk.StringVar()
+        e1 = ttk.Entry(body, textvariable=v1, show="●", width=34)
+        e1.pack(anchor="w", pady=(10, 0))
+        if confirm:
+            tk.Label(body, text="Nhập lại mật khẩu", bg=C_CARD, fg=C_MUTED, font=(FONT, 9)).pack(anchor="w",
+                                                                                               pady=(8, 0))
+            ttk.Entry(body, textvariable=v2, show="●", width=34).pack(anchor="w", pady=(2, 0))
+        err = tk.Label(body, text="", bg=C_CARD, fg=C_RED, font=(FONT, 9))
+        err.pack(anchor="w", pady=(6, 0))
+        res = {"v": None}
+
+        def ok(_e=None):
+            a = v1.get()
+            if confirm:
+                if len(a) < 4:
+                    err.config(text="Mật khẩu ít nhất 4 ký tự.")
+                    return
+                if a != v2.get():
+                    err.config(text="Hai lần nhập không giống nhau.")
+                    return
+            res["v"] = a
+            win.destroy()
+        bf = tk.Frame(body, bg=C_CARD)
+        bf.pack(fill="x", pady=(8, 0))
+        ttk.Button(bf, text="✓  OK", style="Accent.TButton", command=ok).pack(side="right")
+        ttk.Button(bf, text="Hủy", command=win.destroy).pack(side="right", padx=8)
+        win.bind("<Return>", ok)
+        win.bind("<Escape>", lambda e: win.destroy())
+        win.update_idletasks()
+        win.geometry(f"+{self.winfo_rootx() + max(0, (self.winfo_width() - win.winfo_width()) // 2)}"
+                     f"+{self.winfo_rooty() + 160}")
+        e1.focus_set()
+        try:
+            win.grab_set()
+        except tk.TclError:
+            pass
+        self.wait_window(win)
+        return res["v"]
+
+    def _admin_set_pw(self, pw):
+        salt = os.urandom(8).hex()
+        self.cfg["admin_salt"], self.cfg["admin_hash"] = salt, self._pw_hash(pw, salt)
+        self.save_config()
+
+    def admin_unlock(self, ask=True):
+        """Tab Thư mục phim / Cài đặt cần mật khẩu admin. Mở khóa 1 lần dùng tới khi khóa lại / tự khóa."""
+        if self.admin_is_unlocked():
+            self._admin_last = time.time()
+            return True
+        if not ask:
+            return False
+        if not self.cfg.get("admin_hash"):
+            pw = self._pw_dialog("Tạo mật khẩu admin", "Tab Thư mục phim và Cài đặt được khóa bằng mật khẩu admin để "
+                                 "tránh bấm nhầm. Tạo mật khẩu (ít nhất 4 ký tự):", confirm=True)
+            if not pw:
+                return False
+            self._admin_set_pw(pw)
+            self.log("🔑 Đã tạo mật khẩu admin.")
+        else:
+            for _ in range(3):
+                pw = self._pw_dialog("Mật khẩu admin", "Nhập mật khẩu admin để mở tab Thư mục phim / Cài đặt:")
+                if pw is None:
+                    return False
+                if self._pw_hash(pw, self.cfg.get("admin_salt", "")) == self.cfg.get("admin_hash"):
+                    break
+                messagebox.showwarning(APP_NAME, "Sai mật khẩu admin.")
+            else:
+                return False
+        self._admin_until, self._admin_last = time.time(), time.time()
+        self._admin_badge()
+        return True
+
+    def admin_lock(self, msg="🔒 Đã khóa tab Thư mục phim / Cài đặt."):
+        self._admin_until = 0
+        self._admin_badge()
+        if getattr(self, "page", None) in self.LOCKED_PAGES:
+            self.select_page("scan")
+        self.status_var.set(msg)
+
+    def admin_change_pw(self):
+        if self.cfg.get("admin_hash"):
+            old = self._pw_dialog("Đổi mật khẩu admin", "Nhập mật khẩu admin hiện tại:")
+            if old is None:
+                return
+            if self._pw_hash(old, self.cfg.get("admin_salt", "")) != self.cfg.get("admin_hash"):
+                messagebox.showwarning(APP_NAME, "Sai mật khẩu admin hiện tại.")
+                return
+        new = self._pw_dialog("Đổi mật khẩu admin", "Mật khẩu admin mới (ít nhất 4 ký tự):", confirm=True)
+        if new:
+            self._admin_set_pw(new)
+            messagebox.showinfo(APP_NAME, "Đã đổi mật khẩu admin.")
+
+    def _admin_badge(self):
+        try:
+            if self.admin_is_unlocked():
+                self.top_lock.config(text="🔓  Khóa lại", fg=C_GREEN)
+            else:
+                self.top_lock.config(text="🔒  Đã khóa", fg=C_MUTED)
+        except (AttributeError, tk.TclError):
+            pass
 
     # ================================================================ GIAO DIỆN
     def _theme_menu(self, widget):
@@ -4254,7 +4404,14 @@ class App(tk.Tk):
                 ttk.Button(fr, text="🗑  Xóa", style="DangerSmall.TButton",
                            command=lambda k=key: self.remove_theme(k)).grid(row=r, column=2, sticky="w", padx=6)
 
-    def select_page(self, key):
+    LOCKED_PAGES = ("folders", "settings")
+
+    def select_page(self, key, ask=True):
+        if key in self.LOCKED_PAGES and not self.admin_unlock(ask):
+            if getattr(self, "page", None) is None:
+                key = "scan"
+            else:
+                return False
         self.page = key
         self.nb.select(self.nav[key]["frame"])
         t, sub = self.PAGE_INFO.get(key, ("", ""))
@@ -4868,6 +5025,20 @@ class App(tk.Tk):
                                "tool tự khởi động lại.")
         self._theme_box = g.frame()
         self._fill_theme_box(self._theme_box)
+        g.section("Mật khẩu admin", "Tab Thư mục phim và Cài đặt cần mật khẩu admin mới mở được (tránh bấm nhầm). "
+                                    "Quên mật khẩu: tắt tool, mở Data\\config.json xóa 2 dòng \"admin_hash\" và "
+                                    "\"admin_salt\" rồi mở lại tool để tạo mật khẩu mới.")
+        fr = g.frame()
+        ttk.Button(fr, text="🔑  Đổi mật khẩu admin", command=self.admin_change_pw).pack(side="left")
+        ttk.Button(fr, text="🔒  Khóa ngay", command=self.admin_lock).pack(side="left", padx=8)
+        ttk.Label(fr, text="Tự khóa sau", style="Muted.TLabel").pack(side="left", padx=(16, 4))
+        lock_var = tk.StringVar(value=str(self.cfg.get("admin_lock_min", 10)))
+        cb = ttk.Combobox(fr, textvariable=lock_var, values=("0", "5", "10", "15", "30", "60"), width=4,
+                          state="readonly")
+        cb.pack(side="left")
+        cb.bind("<<ComboboxSelected>>", lambda e: (self.cfg.__setitem__("admin_lock_min", int(lock_var.get())),
+                                                   self.save_config()))
+        ttk.Label(fr, text="phút không thao tác  (0 = không tự khóa)", style="Muted.TLabel").pack(side="left", padx=4)
         g.section("Tự động")
         fr = g.frame()
         ttk.Checkbutton(fr, text="Tự quét & tải mỗi", variable=self.auto_var, command=self._auto_changed).pack(side="left")

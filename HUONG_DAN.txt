@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v1.6 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v1.7 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -27,7 +27,10 @@ LẦN ĐẦU
    6. Tab Quét & Tải -> "Quét & Tải". Bật "Tự quét mỗi ... phút" để tool tự làm.
 
 MẸO
-   - Giao diện: nút "◐ Giao diện" trên thanh tiêu đề -> Gốc (v1.3) / Mới (nền trắng, nút đỏ, thanh bên cam nhạt).
+   - Mật khẩu admin: tab Thư mục phim / Cài đặt cần mật khẩu (tạo ở lần đầu bấm vào). "🔒 Khóa lại" trên thanh
+     tiêu đề để khóa ngay; tự khóa sau 10 phút không thao tác. Quên mật khẩu: tắt tool, xóa 2 dòng "admin_hash",
+     "admin_salt" trong Data\config.json rồi mở lại.
+   - Giao diện: nút "◐ Giao diện" trên thanh tiêu đề -> Gốc (v1.3) / Mới (nền trắng, nút đỏ, thanh bên xanh da trời nhạt).
      Giao diện mới có nút "🗑 Xóa" (khôi phục ở Cài đặt > Chung > Giao diện). Giao diện gốc không xóa được.
    - Nút "⟳ Cập nhật" góc trên: tự báo bản mới trên GitHub (laocuumon1982-cpu/PikPak-Auto-Save).
    - Lỗi: tool ghi báo cáo vào Data\BaoLoi - bấm dòng đỏ ở thanh bên để COPY, dán cho Claude sửa.
