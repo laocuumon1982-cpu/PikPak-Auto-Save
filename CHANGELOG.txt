@@ -1,6 +1,14 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v2.1  (08/11/2026)
+  - Chỉ giữ 3 giao diện, đặt tên theo thứ tự:
+    · Giao diện 1: gốc v1.3 (không xóa được);
+    · Giao diện 2: thanh bên xanh da trời nhạt;
+    · Giao diện 3 (mới): y như giao diện 2 nhưng thanh tải là dải liền, trạng thái trong bảng Quét & Tải
+      hiện thành nhãn có viền màu (xanh = tập mới, cam = đang tải, xanh lá = xong, đỏ = lỗi).
+  - Bỏ giao diện A, B, E, Workspace, Workspace tím, Theo phim (đang dùng thì tự về giao diện 1).
+
 v2.0  (08/11/2026)
   - Giữ nguyên tính năng v1.8. Bỏ giao diện Flat Teal. Thêm 6 giao diện theo ảnh mẫu:
     · A (sáng · xanh dương), B (tối · đỏ), E (thanh bên nâu đen · vàng hổ phách): bố cục cũ,

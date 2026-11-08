@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v2.0 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v2.1 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -30,7 +30,7 @@ MẸO
    - Mật khẩu admin: tab Thư mục phim / Cài đặt cần mật khẩu (tạo ở lần đầu bấm vào). "🔒 Khóa lại" trên thanh
      tiêu đề để khóa ngay; tự khóa sau 10 phút không thao tác. Quên mật khẩu: tắt tool, xóa 2 dòng "admin_hash",
      "admin_salt" trong Data\config.json rồi mở lại.
-   - Giao diện: Gốc (v1.3) / Mới / A / B / E / Workspace / Workspace tím / Theo phim.
+   - Giao diện: 1 (gốc v1.3) / 2 (thanh bên xanh da trời nhạt) / 3 (như 2, thanh tải dải liền, nhãn trạng thái).
      Mỗi giao diện có "⭐ Đặt mặc định" và "🗑 Xóa" (Cài đặt > Chung > Giao diện, hoặc nút "◐ Giao diện").
      Giao diện gốc không xóa được; giao diện đã xóa khôi phục lại được.
    - Nút "⟳ Cập nhật" góc trên: tự báo bản mới trên GitHub (laocuumon1982-cpu/PikPak-Auto-Save).

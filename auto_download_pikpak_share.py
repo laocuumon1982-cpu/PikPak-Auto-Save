@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v2.0 by Duy Anh
+PikPak Auto Save v2.1 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -42,7 +42,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v2.0 by Duy Anh"
+APP_VERSION = "v2.1 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -161,6 +161,7 @@ AVATARS = False               # ảnh chữ cái tên phim trong bảng (cần P
 C_CTA, C_CTA_HOVER = "", ""   # nút hành động phụ (Tải mục đã chọn); trống = theo C_ACCENT
 STAT_COLORS = ()              # màu 4 ô thống kê; trống = mặc định
 ROW_H_ADD = 0                 # tăng chiều cao dòng bảng
+PILL_STATUS = False           # cột Trạng thái hiện thành nhãn có viền màu
 SIDE_BOLD = False             # chữ thanh bên in đậm hết
 C_SIDE_BRAND = "#ffffff"      # tên tool ở thanh bên
 THEMES = {
@@ -185,95 +186,15 @@ THEMES = {
         "C_STAT1": "#ea580c",
     },
 }
-_LIGHT_BASE = {
-    "C_BG": "#f3f5f8", "C_CARD": "#ffffff", "C_PANEL": "#fafbfc", "C_FIELD": "#ffffff",
-    "C_ACCENT": "#2563eb", "C_ACCENT_HOVER": "#1d4ed8", "C_ACCENT_DIS": "#b9cdf7", "C_ON_ACCENT": "#ffffff",
-    "C_SOFT": "#f6f8fb", "C_SOFT_BORDER": "#e3e8ef", "C_SEL": "#e3edfd", "C_HEAD": "#f8fafc",
-    "C_ODD": "#ffffff", "C_TEXT": "#111827", "C_MUTED": "#6b7280", "C_BORDER": "#e5e7eb",
-    "C_GREEN": "#15803d", "C_ORANGE": "#c2410c", "C_RED": "#dc2626", "C_BLUE": "#2563eb", "C_WARN_BG": "#fff7ed",
-    "C_SIDE": "#f7f8fa", "C_SIDE_CARD": "#eff2f6", "C_SIDE_HOVER": "#e8f0fe", "C_SIDE_ACTIVE": "#2563eb",
-    "C_SIDE_TEXT": "#1f2937", "C_SIDE_MUTED": "#6b7280", "C_SIDE_SEL_TEXT": "#1d4ed8", "C_SIDE_BRAND": "#111827",
-    "C_BTN_HOVER": "#f1f5f9", "C_DIS_TEXT": "#a0a7b4",
-    "C_DANGER_BG": "#fef2f2", "C_DANGER_BORDER": "#fecaca", "C_DANGER_HOVER": "#fee2e2", "C_DANGER_DIS": "#f0b4b4",
-    "C_TROUGH": "#e5e9f0", "C_SCROLL_ACT": "#cbd5e1", "C_SKIP": "#9ca3af",
-    "C_SIDE_OK": "#15803d", "C_SIDE_BAD": "#dc2626", "C_ERR_BG": "#fef2f2", "C_ERR_FG": "#b91c1c",
-    "C_FOOT": "#6b7280", "C_LOG_BG": "#0f172a", "C_LOG_FG": "#cbd5e1", "C_CHECK_BORDER": "#c3c9d4",
-    "C_GLYPH": "#d1d5db", "ENERGY_EMPTY": "#e5e9f0", "C_STAT1": "#2563eb",
-    "BAR_STYLE": "smooth", "C_CTA": "#d97706", "C_CTA_HOVER": "#b45309", "SIDE_FONT_ADD": 0, "SIDE_BOLD": False,
-}
-# ----- ảnh A: sáng · xanh dương (bố cục cũ, thanh % liền, nút cam "Tải mục đã chọn")
-THEMES["a"] = dict(_LIGHT_BASE, **{
-    "STAT_COLORS": ("#2563eb", "#2563eb", "#b45309", "#15803d"),
-    "ENERGY_SETS": {"dl": ("#93c5fd", "#3b82f6", "#1d4ed8"), "up": ("#2563eb", "#2563eb"),
-                    "all": ("#15803d", "#16a34a")},
-})
-# ----- ảnh B: tối · đỏ (bố cục cũ)
-THEMES["b"] = {
-    "C_BG": "#0d0d12", "C_CARD": "#121218", "C_PANEL": "#16161d", "C_FIELD": "#1a1a22",
-    "C_ACCENT": "#e11d48", "C_ACCENT_HOVER": "#be123c", "C_ACCENT_DIS": "#5c1a2b", "C_ON_ACCENT": "#ffffff",
-    "C_SOFT": "#15151c", "C_SOFT_BORDER": "#26262f", "C_SEL": "#3a1420", "C_HEAD": "#15151b",
-    "C_ODD": "#121218", "C_TEXT": "#e7e7ee", "C_MUTED": "#8b8b99", "C_BORDER": "#26262f",
-    "C_GREEN": "#22c55e", "C_ORANGE": "#f59e0b", "C_RED": "#f43f5e", "C_BLUE": "#8b8cf6", "C_WARN_BG": "#2a1f0e",
-    "C_SIDE": "#0a0a0e", "C_SIDE_CARD": "#14141b", "C_SIDE_HOVER": "#2a121a", "C_SIDE_ACTIVE": "#e11d48",
-    "C_SIDE_TEXT": "#f1f1f5", "C_SIDE_MUTED": "#8b8b99", "C_SIDE_SEL_TEXT": "#ffffff", "C_SIDE_BRAND": "#ffffff",
-    "C_BTN_HOVER": "#1f1f28", "C_DIS_TEXT": "#55555f",
-    "C_DANGER_BG": "#1f1116", "C_DANGER_BORDER": "#4a1d2a", "C_DANGER_HOVER": "#2c1219", "C_DANGER_DIS": "#6b3a48",
-    "C_TROUGH": "#22222b", "C_SCROLL_ACT": "#33333e", "C_SKIP": "#5f5f6b",
-    "C_SIDE_OK": "#4ade80", "C_SIDE_BAD": "#fb7185", "C_ERR_BG": "#3b0d18", "C_ERR_FG": "#fecdd3",
-    "C_FOOT": "#5f5f6b", "C_LOG_BG": "#0a0a0f", "C_LOG_FG": "#86efac", "C_CHECK_BORDER": "#3a3a46",
-    "C_GLYPH": "#2a2a33", "ENERGY_EMPTY": "#22222b", "C_STAT1": "#818cf8",
-    "BAR_STYLE": "smooth", "C_CTA": "#e11d48", "C_CTA_HOVER": "#be123c",
-    "STAT_COLORS": ("#818cf8", "#818cf8", "#f59e0b", "#22c55e"),
-    "ENERGY_SETS": {"dl": ("#9f1239", "#e11d48", "#fb7185"), "up": ("#818cf8", "#818cf8"),
-                    "all": ("#22c55e", "#22c55e")},
-}
-# ----- ảnh E: thanh bên nâu đen · vàng hổ phách (bố cục cũ)
-THEMES["e"] = dict(_LIGHT_BASE, **{
-    "C_BG": "#faf8f5", "C_PANEL": "#fdfbf7", "C_ACCENT": "#1c1917", "C_ACCENT_HOVER": "#000000",
-    "C_ACCENT_DIS": "#a8a29e", "C_SOFT": "#fbf4e8", "C_SOFT_BORDER": "#efdcbc", "C_SEL": "#f5e9d6",
-    "C_HEAD": "#f7f3ee", "C_TEXT": "#1c1917", "C_MUTED": "#78716c", "C_BORDER": "#ece6de",
-    "C_GREEN": "#15803d", "C_ORANGE": "#b45309", "C_RED": "#b91c1c", "C_BLUE": "#1e3a8a",
-    "C_SIDE": "#1f1b18", "C_SIDE_CARD": "#2a2522", "C_SIDE_HOVER": "#3a322c", "C_SIDE_ACTIVE": "#f59e0b",
-    "C_SIDE_TEXT": "#f5efe6", "C_SIDE_MUTED": "#a8a29e", "C_SIDE_SEL_TEXT": "#fbbf24", "C_SIDE_BRAND": "#fbbf24",
-    "C_SIDE_OK": "#fcd34d", "C_SIDE_BAD": "#fca5a5", "C_ERR_BG": "#7f1d1d", "C_ERR_FG": "#fee2e2",
-    "C_FOOT": "#a8a29e", "C_LOG_BG": "#1c1917", "C_LOG_FG": "#fde68a", "C_TROUGH": "#ece6de",
-    "ENERGY_EMPTY": "#ece6de", "C_STAT1": "#b45309", "C_CTA": "#b45309", "C_CTA_HOVER": "#92400e",
-    "STAT_COLORS": ("#b45309", "#1e3a8a", "#b45309", "#15803d"),
-    "ENERGY_SETS": {"dl": ("#fde68a", "#f59e0b", "#b45309", "#7c2d12"), "up": ("#1e40af", "#1e40af"),
-                    "all": ("#15803d", "#15803d")},
-})
-# ----- ảnh 6: Workspace sáng (thanh bên trắng có nhóm, ô tìm kiếm, ảnh chữ phim, đồng hồ đếm ngược)
-THEMES["ws"] = dict(_LIGHT_BASE, **{
-    "LAYOUT": "workspace", "AVATARS": True, "ROW_H_ADD": 8, "C_BG": "#f6f7fb", "C_SIDE": "#ffffff",
-    "C_SIDE_CARD": "#f6f7fb", "C_SIDE_HOVER": "#eef4ff", "C_SEL": "#e8f0fe",
-    "STAT_COLORS": ("#2563eb", "#2563eb", "#15803d", "#dc2626"),
-    "ENERGY_SETS": {"dl": ("#93c5fd", "#3b82f6", "#1d4ed8"), "up": ("#2563eb", "#2563eb"),
-                    "all": ("#15803d", "#16a34a")},
-})
-# ----- ảnh 7: Workspace tím (thanh bên indigo, nút xanh lá)
-THEMES["wsi"] = dict(THEMES["ws"], **{
-    "C_ACCENT": "#4f46e5", "C_ACCENT_HOVER": "#4338ca", "C_ACCENT_DIS": "#c7c4f7", "C_SEL": "#eceafd",
-    "C_SIDE": "#2e2a85", "C_SIDE_CARD": "#3a35a0", "C_SIDE_HOVER": "#4b45c6", "C_SIDE_ACTIVE": "#4ade80",
-    "C_SIDE_TEXT": "#ffffff", "C_SIDE_MUTED": "#c7d2fe", "C_SIDE_SEL_TEXT": "#ffffff", "C_SIDE_BRAND": "#ffffff",
-    "C_SIDE_OK": "#86efac", "C_SIDE_BAD": "#fecaca", "C_FOOT": "#c7d2fe", "C_LOG_BG": "#1e1b4b",
-    "C_LOG_FG": "#e0e7ff", "C_CTA": "#16a34a", "C_CTA_HOVER": "#15803d", "C_BLUE": "#4f46e5", "C_STAT1": "#4f46e5",
-    "STAT_COLORS": ("#4f46e5", "#4f46e5", "#15803d", "#dc2626"),
-    "ENERGY_SETS": {"dl": ("#c7d2fe", "#818cf8", "#4f46e5"), "up": ("#4f46e5", "#4f46e5"),
-                    "all": ("#15803d", "#16a34a")},
-})
-# ----- ảnh 5: Theo phim (thanh icon, danh sách phim, bảng từng tập, hàng đợi phía dưới)
-THEMES["movie"] = dict(THEMES["ws"], **{"LAYOUT": "movie", "C_SIDE": "#ffffff", "C_SIDE_HOVER": "#eef4ff"})
-THEME_NAMES = {"classic": "Giao diện gốc  (v1.3)",
-               "fresh": "Giao diện Mới  (thanh bên xanh da trời nhạt)",
-               "a": "Giao diện A  (sáng · xanh dương)",
-               "b": "Giao diện B  (tối · đỏ)",
-               "e": "Giao diện E  (nâu đen · vàng hổ phách)",
-               "ws": "Giao diện Workspace  (sáng · có tìm kiếm, đếm ngược)",
-               "wsi": "Giao diện Workspace tím  (indigo · nút xanh lá)",
-               "movie": "Giao diện Theo phim  (danh sách phim · từng tập · hàng đợi)"}
-THEME_SHORT = {"classic": "giao diện gốc", "fresh": "giao diện Mới", "a": "giao diện A", "b": "giao diện B",
-               "e": "giao diện E", "ws": "giao diện Workspace", "wsi": "giao diện Workspace tím",
-               "movie": "giao diện Theo phim"}
+# ----- Giao diện 3: y như giao diện 2 (thanh bên xanh da trời nhạt) nhưng thanh tải là dải liền,
+#       trạng thái trong bảng hiện thành nhãn có viền màu
+THEMES["fresh2"] = dict(THEMES["fresh"], BAR_STYLE="smooth", PILL_STATUS=True,
+                        ENERGY_SETS={"dl": ("#fca5a5", "#ef4444", "#dc2626"), "up": ("#93c5fd", "#2563eb"),
+                                     "all": ("#86efac", "#16a34a")})
+THEME_NAMES = {"classic": "Giao diện 1  (gốc v1.3)",
+               "fresh": "Giao diện 2  (thanh bên xanh da trời nhạt)",
+               "fresh2": "Giao diện 3  (như 2 · thanh tải dải liền · nhãn trạng thái có viền)"}
+THEME_SHORT = {"classic": "giao diện 1", "fresh": "giao diện 2", "fresh2": "giao diện 3"}
 
 
 def apply_theme(name):
@@ -1977,6 +1898,8 @@ class App(tk.Tk):
         self.after(20000, self._admin_tick)
         if LAYOUT != "classic":
             self.after(800, self._layout_tick)
+        if PILL_STATUS:
+            self.after(500, self._pill_tick)
         if self.cfg.get("last_summary"):
             self._set_last(self.cfg["last_summary"])
         self.update_stats()
@@ -5639,6 +5562,66 @@ class App(tk.Tk):
         ups = len(getattr(self, "up_queued", ()) or ())
         c3[4].config(text=f"{ups} tập đang Save" if ups else "Đã Save đủ")
 
+    # ================================================================ NHÃN TRẠNG THÁI CÓ VIỀN (giao diện 3)
+    PILL_TAG_COLORS = (("err", "C_RED"), ("dl", "C_ORANGE"), ("done", "C_GREEN"), ("new", "C_BLUE"),
+                       ("skip", "C_SKIP"))
+
+    def _pill_color(self, tags):
+        for t, key in self.PILL_TAG_COLORS:
+            if t in tags:
+                return globals()[key]
+        return C_MUTED
+
+    def _pill_refresh(self):
+        """Đặt nhãn (Label có viền) đè lên ô Trạng thái của các dòng đang thấy trong bảng Quét & Tải."""
+        tr = getattr(self, "scan_tree", None)
+        if tr is None:
+            return
+        pills = self.__dict__.setdefault("_pills", {})
+        used = set()
+        try:
+            if tr.winfo_ismapped():
+                for iid in tr.get_children():
+                    bb = tr.bbox(iid, "status")
+                    if not bb:
+                        continue
+                    x, y, w, h = bb
+                    vals = tr.item(iid, "values")
+                    text = re.sub(r"\s{2,}", "  ", re.sub(r"[▰▱]+\s*", "", str(vals[5]) if len(vals) > 5 else "")).strip()
+                    if not text:
+                        continue
+                    col = self._pill_color(tr.item(iid, "tags"))
+                    sel = iid in tr.selection()
+                    lb = pills.get(iid)
+                    if lb is None:
+                        lb = tk.Label(tr, font=(FONT, 9), padx=7, pady=0, highlightthickness=1, bd=0,
+                                      cursor="hand2")
+                        lb.bind("<Button-1>", lambda e, i=iid: (tr.selection_set(i), tr.focus(i)))
+                        lb.bind("<Double-1>", lambda e: self._open_selected(e))
+                        lb.bind("<MouseWheel>", lambda e: tr.yview_scroll(int(-e.delta / 120), "units"))
+                        pills[iid] = lb
+                    base = C_SEL if sel else (C_ODD if "odd" in tr.item(iid, "tags") else C_CARD)
+                    maxw = max(40, w - 12)
+                    t = text if len(text) * 7 < maxw else text[:max(4, maxw // 7 - 1)] + "…"
+                    lb.config(text=t, fg=col, bg=_mix(base, col, 0.08), highlightbackground=col,
+                              highlightcolor=col)
+                    lh = lb.winfo_reqheight()
+                    lb.place(x=x + 6, y=y + max(0, (h - lh) // 2))
+                    used.add(iid)
+        except tk.TclError:
+            pass
+        for iid, lb in list(pills.items()):
+            if iid not in used:
+                if not tr.exists(iid):
+                    lb.destroy()
+                    del pills[iid]
+                else:
+                    lb.place_forget()
+
+    def _pill_tick(self):
+        self._pill_refresh()
+        self.after(300, self._pill_tick)
+
     LOCKED_PAGES = ("folders", "settings")
 
     def select_page(self, key, ask=True):
@@ -6260,8 +6243,8 @@ class App(tk.Tk):
         # ----- 1. Chung
         g = G(self._set_pages["gen"])
         g.section("Giao diện", "⭐ Đặt mặc định: tool mở bằng giao diện đó (đổi xong tự khởi động lại).  🗑 Xóa: bỏ "
-                               "giao diện (khôi phục lại được). Giao diện gốc (v1.3) không xóa được. A · B · E giữ bố cục "
-                               "cũ, đổi màu + thanh % liền; Workspace và Theo phim là bố cục mới.")
+                               "giao diện (khôi phục lại được). Giao diện 1 (gốc v1.3) không xóa được. Giao diện 3 giống "
+                               "giao diện 2 nhưng thanh tải là dải liền, trạng thái hiện thành nhãn có viền màu.")
         self._theme_box = g.frame()
         self._fill_theme_box(self._theme_box)
         g.section("Mật khẩu admin", "Tab Thư mục phim và Cài đặt cần mật khẩu admin mới mở được (tránh bấm nhầm). "
