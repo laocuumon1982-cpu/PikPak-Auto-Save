@@ -1,6 +1,15 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v1.9  (08/11/2026)
+  - Giữ nguyên tính năng v1.8. Thêm GIAO DIỆN FLAT TEAL, thiết kế theo bộ UI UX Pro Max
+    (github.com/nextlevelbuilder/ui-ux-pro-max-skill) - hệ thống thiết kế đề xuất cho "desktop download manager /
+    productivity dashboard": Flat Design (phẳng, không bóng đổ), nền #F0FDFA, chữ #134E4A, màu chính teal
+    #0D9488 (thanh bên teal đậm, vạch cam nhạt mục đang chọn), nút hành động cam (đủ tương phản 4.5:1),
+    thanh năng lượng các bậc teal.
+  - Mỗi giao diện có nút "⭐ Đặt mặc định" (tool mở bằng giao diện đó) và "🗑 Xóa" (trừ giao diện gốc),
+    ở Cài đặt > Chung > Giao diện và menu "◐ Giao diện".
+
 v1.8  (08/11/2026)
   - Sửa lỗi không copy vào COPY_TO_IPHONE khi thư mục Data chép từ máy khác (VD đường dẫn lưu là
     C:\Users\Duy Anh\... nhưng máy đang dùng tài khoản Admin): tool tự đổi sang thư mục của tài khoản

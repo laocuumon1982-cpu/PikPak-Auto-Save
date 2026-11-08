@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v1.8 by Duy Anh
+PikPak Auto Save v1.9 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -42,7 +42,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v1.8 by Duy Anh"
+APP_VERSION = "v1.9 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -178,10 +178,33 @@ THEMES = {
         "ENERGY_COLORS": ("#f87171", "#ef4444", "#dc2626", "#ea580c", "#f59e0b", "#16a34a"),
         "C_STAT1": "#ea580c",
     },
+    # Flat Design · Teal + Orange - hệ thống thiết kế do UI UX Pro Max đề xuất cho "desktop download manager /
+    # productivity dashboard" (github.com/nextlevelbuilder/ui-ux-pro-max-skill): nền #F0FDFA, chữ #134E4A,
+    # chính teal #0D9488, CTA cam #EA580C (tối hơn 1 bậc để chữ trắng đủ tương phản 4.5:1), không bóng đổ.
+    "teal": {
+        "C_BG": "#f0fdfa", "C_CARD": "#ffffff", "C_PANEL": "#f7fefc", "C_FIELD": "#ffffff",
+        "C_ACCENT": "#c2410c", "C_ACCENT_HOVER": "#9a3412", "C_ACCENT_DIS": "#fdc9a6", "C_ON_ACCENT": "#ffffff",
+        "C_SOFT": "#e6fffa", "C_SOFT_BORDER": "#99f6e4", "C_SEL": "#ccfbf1", "C_HEAD": "#e8f1f4",
+        "C_ODD": "#f7fbfb", "C_TEXT": "#134e4a", "C_MUTED": "#475569", "C_BORDER": "#b5ede3",
+        "C_GREEN": "#047857", "C_ORANGE": "#c2410c", "C_RED": "#dc2626", "C_BLUE": "#0f766e",
+        "C_WARN_BG": "#fff7ed",
+        "C_SIDE": "#0f766e", "C_SIDE_CARD": "#0d6b63", "C_SIDE_HOVER": "#115e59", "C_SIDE_ACTIVE": "#fdba74",
+        "C_SIDE_TEXT": "#ffffff", "C_SIDE_MUTED": "#ccfbf1", "C_SIDE_SEL_TEXT": "#ffffff", "C_SIDE_BRAND": "#ffffff",
+        "SIDE_FONT_ADD": 1, "SIDE_BOLD": False,
+        "C_BTN_HOVER": "#e6fffa", "C_DIS_TEXT": "#94a3b8",
+        "C_DANGER_BG": "#fef2f2", "C_DANGER_BORDER": "#fecaca", "C_DANGER_HOVER": "#fee2e2", "C_DANGER_DIS": "#f0b4b4",
+        "C_TROUGH": "#e8f1f4", "C_SCROLL_ACT": "#99f6e4", "C_SKIP": "#94a3b8",
+        "C_SIDE_OK": "#bbf7d0", "C_SIDE_BAD": "#fecaca", "C_ERR_BG": "#b91c1c", "C_ERR_FG": "#ffffff",
+        "C_FOOT": "#99f6e4", "C_LOG_BG": "#042f2e", "C_LOG_FG": "#ccfbf1", "C_CHECK_BORDER": "#5eead4",
+        "C_GLYPH": "#ccfbf1", "ENERGY_EMPTY": "#e8f1f4",
+        "ENERGY_COLORS": ("#99f6e4", "#5eead4", "#2dd4bf", "#14b8a6", "#0d9488", "#0f766e"),
+        "C_STAT1": "#0d9488",
+    },
 }
 THEME_NAMES = {"classic": "Giao diện gốc  (v1.3)",
+               "teal": "Giao diện Flat Teal  (UI UX Pro Max · teal + cam)",
                "fresh": "Giao diện mới  (nền trắng · nút đỏ · thanh bên xanh da trời nhạt)"}
-THEME_SHORT = {"classic": "giao diện gốc", "fresh": "giao diện mới"}
+THEME_SHORT = {"classic": "giao diện gốc", "fresh": "giao diện mới", "teal": "giao diện Flat Teal"}
 
 
 def apply_theme(name):
@@ -4368,8 +4391,8 @@ class App(tk.Tk):
         rem = removed_themes(self.cfg)
         for key in THEMES:
             if key not in rem:
-                m.add_radiobutton(label=THEME_NAMES[key], variable=var, value=key,
-                                  command=lambda k=key: self.switch_theme(k))
+                m.add_radiobutton(label=("★  " if key == self.layout else "⭐  Đặt mặc định: ") + THEME_NAMES[key],
+                                  variable=var, value=key, command=lambda k=key: self.switch_theme(k))
         extra = [k for k in THEMES if k != "classic" and k not in rem]
         if extra:
             m.add_separator()
@@ -4397,7 +4420,7 @@ class App(tk.Tk):
             return
         old = self.cfg.get("ui_theme")
         self.cfg["ui_theme"] = name
-        if not self._restart_ui(f"Chuyển sang: {THEME_NAMES[name]}"):
+        if not self._restart_ui(f"Đặt mặc định: {THEME_NAMES[name]}"):
             self.cfg["ui_theme"] = old
 
     def _set_removed(self, rem):
@@ -4451,8 +4474,9 @@ class App(tk.Tk):
             pass
 
     def _fill_theme_box(self, fr):
+        """Danh sách giao diện: ⭐ Đặt mặc định (tool mở bằng giao diện này) · 🗑 Xóa (trừ giao diện gốc)."""
         rem = removed_themes(self.cfg)
-        ttk.Label(fr, text="Đang dùng: " + THEME_NAMES[self.layout], style="Muted.TLabel").grid(
+        ttk.Label(fr, text="Mặc định hiện tại: " + THEME_NAMES[self.layout], style="Muted.TLabel").grid(
             row=0, column=0, columnspan=4, sticky="w", pady=(0, 6))
         for r, key in enumerate(THEMES, 1):
             ttk.Label(fr, text=THEME_NAMES[key]).grid(row=r, column=0, sticky="w", pady=3, padx=(0, 14))
@@ -4462,9 +4486,9 @@ class App(tk.Tk):
                            command=lambda k=key: self.restore_theme(k)).grid(row=r, column=2, sticky="w", padx=6)
                 continue
             if key == self.layout:
-                ttk.Label(fr, text="✔ đang dùng", style="Muted.TLabel").grid(row=r, column=1, sticky="w")
+                ttk.Label(fr, text="★ mặc định", style="Muted.TLabel").grid(row=r, column=1, sticky="w")
             else:
-                ttk.Button(fr, text="◐  Dùng giao diện này", style="Small.TButton",
+                ttk.Button(fr, text="⭐  Đặt mặc định", style="Small.TButton",
                            command=lambda k=key: self.switch_theme(k)).grid(row=r, column=1, sticky="w")
             if key == "classic":
                 ttk.Label(fr, text="(gốc - không xóa được)", style="Muted.TLabel").grid(row=r, column=2, sticky="w",
@@ -5089,9 +5113,9 @@ class App(tk.Tk):
 
         # ----- 1. Chung
         g = G(self._set_pages["gen"])
-        g.section("Giao diện", "Giao diện gốc (v1.3) luôn có, không xóa được. Giao diện mới: nền trắng, nút đỏ, thanh "
-                               "bên cam nhạt, mục đang chọn vạch xanh lá. Chọn bằng nút ◐ Giao diện hoặc ở đây, đổi xong "
-                               "tool tự khởi động lại.")
+        g.section("Giao diện", "⭐ Đặt mặc định: tool mở bằng giao diện đó (đổi xong tự khởi động lại).  🗑 Xóa: bỏ "
+                               "giao diện (khôi phục lại được). Giao diện gốc (v1.3) không xóa được. Flat Teal: thiết kế "
+                               "theo UI UX Pro Max (Flat Design, teal + cam).")
         self._theme_box = g.frame()
         self._fill_theme_box(self._theme_box)
         g.section("Mật khẩu admin", "Tab Thư mục phim và Cài đặt cần mật khẩu admin mới mở được (tránh bấm nhầm). "
