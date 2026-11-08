@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v1.9 by Duy Anh
+PikPak Auto Save v2.0 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -42,7 +42,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v1.9 by Duy Anh"
+APP_VERSION = "v2.0 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -155,6 +155,12 @@ C_STAT1 = "#14b8a6"           # màu ô "Thư mục sẽ quét"
 #       thanh bên cam nhạt, mục đang chọn vạch xanh lá) - chọn bằng nút "◐ Giao diện", xóa được ở Cài đặt > Chung.
 C_SIDE_SEL_TEXT = "#ffffff"   # chữ mục đang chọn ở thanh bên
 SIDE_FONT_ADD = 0             # cộng thêm cỡ chữ ở thanh bên
+BAR_STYLE = "segment"         # thanh %: "segment" (ô vuông) / "smooth" (dải liền, chuyển màu)
+LAYOUT = "classic"            # bố cục: "classic" (thanh bên + tab) / "workspace" / "movie"
+AVATARS = False               # ảnh chữ cái tên phim trong bảng (cần Pillow)
+C_CTA, C_CTA_HOVER = "", ""   # nút hành động phụ (Tải mục đã chọn); trống = theo C_ACCENT
+STAT_COLORS = ()              # màu 4 ô thống kê; trống = mặc định
+ROW_H_ADD = 0                 # tăng chiều cao dòng bảng
 SIDE_BOLD = False             # chữ thanh bên in đậm hết
 C_SIDE_BRAND = "#ffffff"      # tên tool ở thanh bên
 THEMES = {
@@ -178,33 +184,96 @@ THEMES = {
         "ENERGY_COLORS": ("#f87171", "#ef4444", "#dc2626", "#ea580c", "#f59e0b", "#16a34a"),
         "C_STAT1": "#ea580c",
     },
-    # Flat Design · Teal + Orange - hệ thống thiết kế do UI UX Pro Max đề xuất cho "desktop download manager /
-    # productivity dashboard" (github.com/nextlevelbuilder/ui-ux-pro-max-skill): nền #F0FDFA, chữ #134E4A,
-    # chính teal #0D9488, CTA cam #EA580C (tối hơn 1 bậc để chữ trắng đủ tương phản 4.5:1), không bóng đổ.
-    "teal": {
-        "C_BG": "#f0fdfa", "C_CARD": "#ffffff", "C_PANEL": "#f7fefc", "C_FIELD": "#ffffff",
-        "C_ACCENT": "#c2410c", "C_ACCENT_HOVER": "#9a3412", "C_ACCENT_DIS": "#fdc9a6", "C_ON_ACCENT": "#ffffff",
-        "C_SOFT": "#e6fffa", "C_SOFT_BORDER": "#99f6e4", "C_SEL": "#ccfbf1", "C_HEAD": "#e8f1f4",
-        "C_ODD": "#f7fbfb", "C_TEXT": "#134e4a", "C_MUTED": "#475569", "C_BORDER": "#b5ede3",
-        "C_GREEN": "#047857", "C_ORANGE": "#c2410c", "C_RED": "#dc2626", "C_BLUE": "#0f766e",
-        "C_WARN_BG": "#fff7ed",
-        "C_SIDE": "#0f766e", "C_SIDE_CARD": "#0d6b63", "C_SIDE_HOVER": "#115e59", "C_SIDE_ACTIVE": "#fdba74",
-        "C_SIDE_TEXT": "#ffffff", "C_SIDE_MUTED": "#ccfbf1", "C_SIDE_SEL_TEXT": "#ffffff", "C_SIDE_BRAND": "#ffffff",
-        "SIDE_FONT_ADD": 1, "SIDE_BOLD": False,
-        "C_BTN_HOVER": "#e6fffa", "C_DIS_TEXT": "#94a3b8",
-        "C_DANGER_BG": "#fef2f2", "C_DANGER_BORDER": "#fecaca", "C_DANGER_HOVER": "#fee2e2", "C_DANGER_DIS": "#f0b4b4",
-        "C_TROUGH": "#e8f1f4", "C_SCROLL_ACT": "#99f6e4", "C_SKIP": "#94a3b8",
-        "C_SIDE_OK": "#bbf7d0", "C_SIDE_BAD": "#fecaca", "C_ERR_BG": "#b91c1c", "C_ERR_FG": "#ffffff",
-        "C_FOOT": "#99f6e4", "C_LOG_BG": "#042f2e", "C_LOG_FG": "#ccfbf1", "C_CHECK_BORDER": "#5eead4",
-        "C_GLYPH": "#ccfbf1", "ENERGY_EMPTY": "#e8f1f4",
-        "ENERGY_COLORS": ("#99f6e4", "#5eead4", "#2dd4bf", "#14b8a6", "#0d9488", "#0f766e"),
-        "C_STAT1": "#0d9488",
-    },
 }
+_LIGHT_BASE = {
+    "C_BG": "#f3f5f8", "C_CARD": "#ffffff", "C_PANEL": "#fafbfc", "C_FIELD": "#ffffff",
+    "C_ACCENT": "#2563eb", "C_ACCENT_HOVER": "#1d4ed8", "C_ACCENT_DIS": "#b9cdf7", "C_ON_ACCENT": "#ffffff",
+    "C_SOFT": "#f6f8fb", "C_SOFT_BORDER": "#e3e8ef", "C_SEL": "#e3edfd", "C_HEAD": "#f8fafc",
+    "C_ODD": "#ffffff", "C_TEXT": "#111827", "C_MUTED": "#6b7280", "C_BORDER": "#e5e7eb",
+    "C_GREEN": "#15803d", "C_ORANGE": "#c2410c", "C_RED": "#dc2626", "C_BLUE": "#2563eb", "C_WARN_BG": "#fff7ed",
+    "C_SIDE": "#f7f8fa", "C_SIDE_CARD": "#eff2f6", "C_SIDE_HOVER": "#e8f0fe", "C_SIDE_ACTIVE": "#2563eb",
+    "C_SIDE_TEXT": "#1f2937", "C_SIDE_MUTED": "#6b7280", "C_SIDE_SEL_TEXT": "#1d4ed8", "C_SIDE_BRAND": "#111827",
+    "C_BTN_HOVER": "#f1f5f9", "C_DIS_TEXT": "#a0a7b4",
+    "C_DANGER_BG": "#fef2f2", "C_DANGER_BORDER": "#fecaca", "C_DANGER_HOVER": "#fee2e2", "C_DANGER_DIS": "#f0b4b4",
+    "C_TROUGH": "#e5e9f0", "C_SCROLL_ACT": "#cbd5e1", "C_SKIP": "#9ca3af",
+    "C_SIDE_OK": "#15803d", "C_SIDE_BAD": "#dc2626", "C_ERR_BG": "#fef2f2", "C_ERR_FG": "#b91c1c",
+    "C_FOOT": "#6b7280", "C_LOG_BG": "#0f172a", "C_LOG_FG": "#cbd5e1", "C_CHECK_BORDER": "#c3c9d4",
+    "C_GLYPH": "#d1d5db", "ENERGY_EMPTY": "#e5e9f0", "C_STAT1": "#2563eb",
+    "BAR_STYLE": "smooth", "C_CTA": "#d97706", "C_CTA_HOVER": "#b45309", "SIDE_FONT_ADD": 0, "SIDE_BOLD": False,
+}
+# ----- ảnh A: sáng · xanh dương (bố cục cũ, thanh % liền, nút cam "Tải mục đã chọn")
+THEMES["a"] = dict(_LIGHT_BASE, **{
+    "STAT_COLORS": ("#2563eb", "#2563eb", "#b45309", "#15803d"),
+    "ENERGY_SETS": {"dl": ("#93c5fd", "#3b82f6", "#1d4ed8"), "up": ("#2563eb", "#2563eb"),
+                    "all": ("#15803d", "#16a34a")},
+})
+# ----- ảnh B: tối · đỏ (bố cục cũ)
+THEMES["b"] = {
+    "C_BG": "#0d0d12", "C_CARD": "#121218", "C_PANEL": "#16161d", "C_FIELD": "#1a1a22",
+    "C_ACCENT": "#e11d48", "C_ACCENT_HOVER": "#be123c", "C_ACCENT_DIS": "#5c1a2b", "C_ON_ACCENT": "#ffffff",
+    "C_SOFT": "#15151c", "C_SOFT_BORDER": "#26262f", "C_SEL": "#3a1420", "C_HEAD": "#15151b",
+    "C_ODD": "#121218", "C_TEXT": "#e7e7ee", "C_MUTED": "#8b8b99", "C_BORDER": "#26262f",
+    "C_GREEN": "#22c55e", "C_ORANGE": "#f59e0b", "C_RED": "#f43f5e", "C_BLUE": "#8b8cf6", "C_WARN_BG": "#2a1f0e",
+    "C_SIDE": "#0a0a0e", "C_SIDE_CARD": "#14141b", "C_SIDE_HOVER": "#2a121a", "C_SIDE_ACTIVE": "#e11d48",
+    "C_SIDE_TEXT": "#f1f1f5", "C_SIDE_MUTED": "#8b8b99", "C_SIDE_SEL_TEXT": "#ffffff", "C_SIDE_BRAND": "#ffffff",
+    "C_BTN_HOVER": "#1f1f28", "C_DIS_TEXT": "#55555f",
+    "C_DANGER_BG": "#1f1116", "C_DANGER_BORDER": "#4a1d2a", "C_DANGER_HOVER": "#2c1219", "C_DANGER_DIS": "#6b3a48",
+    "C_TROUGH": "#22222b", "C_SCROLL_ACT": "#33333e", "C_SKIP": "#5f5f6b",
+    "C_SIDE_OK": "#4ade80", "C_SIDE_BAD": "#fb7185", "C_ERR_BG": "#3b0d18", "C_ERR_FG": "#fecdd3",
+    "C_FOOT": "#5f5f6b", "C_LOG_BG": "#0a0a0f", "C_LOG_FG": "#86efac", "C_CHECK_BORDER": "#3a3a46",
+    "C_GLYPH": "#2a2a33", "ENERGY_EMPTY": "#22222b", "C_STAT1": "#818cf8",
+    "BAR_STYLE": "smooth", "C_CTA": "#e11d48", "C_CTA_HOVER": "#be123c",
+    "STAT_COLORS": ("#818cf8", "#818cf8", "#f59e0b", "#22c55e"),
+    "ENERGY_SETS": {"dl": ("#9f1239", "#e11d48", "#fb7185"), "up": ("#818cf8", "#818cf8"),
+                    "all": ("#22c55e", "#22c55e")},
+}
+# ----- ảnh E: thanh bên nâu đen · vàng hổ phách (bố cục cũ)
+THEMES["e"] = dict(_LIGHT_BASE, **{
+    "C_BG": "#faf8f5", "C_PANEL": "#fdfbf7", "C_ACCENT": "#1c1917", "C_ACCENT_HOVER": "#000000",
+    "C_ACCENT_DIS": "#a8a29e", "C_SOFT": "#fbf4e8", "C_SOFT_BORDER": "#efdcbc", "C_SEL": "#f5e9d6",
+    "C_HEAD": "#f7f3ee", "C_TEXT": "#1c1917", "C_MUTED": "#78716c", "C_BORDER": "#ece6de",
+    "C_GREEN": "#15803d", "C_ORANGE": "#b45309", "C_RED": "#b91c1c", "C_BLUE": "#1e3a8a",
+    "C_SIDE": "#1f1b18", "C_SIDE_CARD": "#2a2522", "C_SIDE_HOVER": "#3a322c", "C_SIDE_ACTIVE": "#f59e0b",
+    "C_SIDE_TEXT": "#f5efe6", "C_SIDE_MUTED": "#a8a29e", "C_SIDE_SEL_TEXT": "#fbbf24", "C_SIDE_BRAND": "#fbbf24",
+    "C_SIDE_OK": "#fcd34d", "C_SIDE_BAD": "#fca5a5", "C_ERR_BG": "#7f1d1d", "C_ERR_FG": "#fee2e2",
+    "C_FOOT": "#a8a29e", "C_LOG_BG": "#1c1917", "C_LOG_FG": "#fde68a", "C_TROUGH": "#ece6de",
+    "ENERGY_EMPTY": "#ece6de", "C_STAT1": "#b45309", "C_CTA": "#b45309", "C_CTA_HOVER": "#92400e",
+    "STAT_COLORS": ("#b45309", "#1e3a8a", "#b45309", "#15803d"),
+    "ENERGY_SETS": {"dl": ("#fde68a", "#f59e0b", "#b45309", "#7c2d12"), "up": ("#1e40af", "#1e40af"),
+                    "all": ("#15803d", "#15803d")},
+})
+# ----- ảnh 6: Workspace sáng (thanh bên trắng có nhóm, ô tìm kiếm, ảnh chữ phim, đồng hồ đếm ngược)
+THEMES["ws"] = dict(_LIGHT_BASE, **{
+    "LAYOUT": "workspace", "AVATARS": True, "ROW_H_ADD": 8, "C_BG": "#f6f7fb", "C_SIDE": "#ffffff",
+    "C_SIDE_CARD": "#f6f7fb", "C_SIDE_HOVER": "#eef4ff", "C_SEL": "#e8f0fe",
+    "STAT_COLORS": ("#2563eb", "#2563eb", "#15803d", "#dc2626"),
+    "ENERGY_SETS": {"dl": ("#93c5fd", "#3b82f6", "#1d4ed8"), "up": ("#2563eb", "#2563eb"),
+                    "all": ("#15803d", "#16a34a")},
+})
+# ----- ảnh 7: Workspace tím (thanh bên indigo, nút xanh lá)
+THEMES["wsi"] = dict(THEMES["ws"], **{
+    "C_ACCENT": "#4f46e5", "C_ACCENT_HOVER": "#4338ca", "C_ACCENT_DIS": "#c7c4f7", "C_SEL": "#eceafd",
+    "C_SIDE": "#2e2a85", "C_SIDE_CARD": "#3a35a0", "C_SIDE_HOVER": "#4b45c6", "C_SIDE_ACTIVE": "#4ade80",
+    "C_SIDE_TEXT": "#ffffff", "C_SIDE_MUTED": "#c7d2fe", "C_SIDE_SEL_TEXT": "#ffffff", "C_SIDE_BRAND": "#ffffff",
+    "C_SIDE_OK": "#86efac", "C_SIDE_BAD": "#fecaca", "C_FOOT": "#c7d2fe", "C_LOG_BG": "#1e1b4b",
+    "C_LOG_FG": "#e0e7ff", "C_CTA": "#16a34a", "C_CTA_HOVER": "#15803d", "C_BLUE": "#4f46e5", "C_STAT1": "#4f46e5",
+    "STAT_COLORS": ("#4f46e5", "#4f46e5", "#15803d", "#dc2626"),
+    "ENERGY_SETS": {"dl": ("#c7d2fe", "#818cf8", "#4f46e5"), "up": ("#4f46e5", "#4f46e5"),
+                    "all": ("#15803d", "#16a34a")},
+})
+# ----- ảnh 5: Theo phim (thanh icon, danh sách phim, bảng từng tập, hàng đợi phía dưới)
+THEMES["movie"] = dict(THEMES["ws"], **{"LAYOUT": "movie", "C_SIDE": "#ffffff", "C_SIDE_HOVER": "#eef4ff"})
 THEME_NAMES = {"classic": "Giao diện gốc  (v1.3)",
-               "teal": "Giao diện Flat Teal  (UI UX Pro Max · teal + cam)",
-               "fresh": "Giao diện mới  (nền trắng · nút đỏ · thanh bên xanh da trời nhạt)"}
-THEME_SHORT = {"classic": "giao diện gốc", "fresh": "giao diện mới", "teal": "giao diện Flat Teal"}
+               "fresh": "Giao diện Mới  (thanh bên xanh da trời nhạt)",
+               "a": "Giao diện A  (sáng · xanh dương)",
+               "b": "Giao diện B  (tối · đỏ)",
+               "e": "Giao diện E  (nâu đen · vàng hổ phách)",
+               "ws": "Giao diện Workspace  (sáng · có tìm kiếm, đếm ngược)",
+               "wsi": "Giao diện Workspace tím  (indigo · nút xanh lá)",
+               "movie": "Giao diện Theo phim  (danh sách phim · từng tập · hàng đợi)"}
+THEME_SHORT = {"classic": "giao diện gốc", "fresh": "giao diện Mới", "a": "giao diện A", "b": "giao diện B",
+               "e": "giao diện E", "ws": "giao diện Workspace", "wsi": "giao diện Workspace tím",
+               "movie": "giao diện Theo phim"}
 
 
 def apply_theme(name):
@@ -1782,6 +1851,25 @@ class EnergyBar(tk.Canvas):
         w, h = self.winfo_width(), self.winfo_height()
         if w < 20:
             return
+        if BAR_STYLE == "smooth":                   # dải liền bo tròn, chuyển màu theo chiều ngang
+            th = max(6, min(12, h - 4))
+            y0 = (h - th) / 2
+            y1 = y0 + th
+            r = th / 2
+            self.create_oval(0, y0, th, y1, fill=self.empty, outline="")
+            self.create_oval(w - 1 - th, y0, w - 1, y1, fill=self.empty, outline="")
+            self.create_rectangle(r, y0, w - 1 - r, y1, fill=self.empty, outline="")
+            fw = (w - 1) * self.pct / 100
+            if fw > 0:
+                fw = max(fw, th)
+                n = max(1, int((fw - th) // 3))
+                for k in range(n):
+                    xa = r + (fw - th) * k / n
+                    xb = r + (fw - th) * (k + 1) / n
+                    self.create_rectangle(xa, y0, xb + 1, y1, fill=self._color(k / max(1, n - 1)), outline="")
+                self.create_oval(0, y0, th, y1, fill=self._color(0), outline="")
+                self.create_oval(fw - th, y0, fw, y1, fill=self._color(1), outline="")
+            return
         gap = 3
         n = max(8, min(self.seg, int(w // 14)))      # cửa sổ hẹp -> ít ô hơn, ô không bị mảnh như mã vạch
         sw = (w - gap * (n - 1)) / n
@@ -1864,13 +1952,18 @@ class App(tk.Tk):
         self._make_check_images()
         body = tk.Frame(self, bg=C_BG)
         body.pack(fill="both", expand=True)
-        main = tk.Frame(body, bg=C_BG)
-        self._build_header(main)
-        self._build_statusbar(main)
-        nb = self._make_notebook(main)
-        self._build_sidebar(body)
-        main.pack(side="left", fill="both", expand=True)
-        nb.pack(fill="both", expand=True, padx=18, pady=(16, 0))
+        if LAYOUT == "workspace":
+            self._build_ws_layout(body)
+        elif LAYOUT == "movie":
+            self._build_movie_layout(body)
+        else:
+            main = tk.Frame(body, bg=C_BG)
+            self._build_header(main)
+            self._build_statusbar(main)
+            nb = self._make_notebook(main)
+            self._build_sidebar(body)
+            main.pack(side="left", fill="both", expand=True)
+            nb.pack(fill="both", expand=True, padx=18, pady=(16, 0))
 
         self._build_scan()
         self._build_folders()
@@ -1882,6 +1975,8 @@ class App(tk.Tk):
         for seq in ("<Any-KeyPress>", "<Any-ButtonPress>"):
             self.bind_all(seq, self._admin_activity, add="+")
         self.after(20000, self._admin_tick)
+        if LAYOUT != "classic":
+            self.after(800, self._layout_tick)
         if self.cfg.get("last_summary"):
             self._set_last(self.cfg["last_summary"])
         self.update_stats()
@@ -1983,7 +2078,7 @@ class App(tk.Tk):
         st = ttk.Style(self)
         st.theme_use("clam")
         base = tkfont.Font(family=FONT, size=10)
-        self.row_h = max(30, base.metrics("linespace") + 14)     # dòng bảng đủ cao, không cắt chữ
+        self.row_h = max(30, base.metrics("linespace") + 14) + ROW_H_ADD     # dòng bảng đủ cao, không cắt chữ
         self.option_add("*TCombobox*Listbox.background", C_PANEL)
         self.option_add("*TCombobox*Listbox.foreground", C_TEXT)
         self.option_add("*TCombobox*Listbox.selectBackground", C_ACCENT)
@@ -2019,6 +2114,11 @@ class App(tk.Tk):
                          lightcolor=C_ACCENT, darkcolor=C_ACCENT, font=(FONT, fs, "bold"), padding=pad)
             st.map(name, background=[("active", C_ACCENT_HOVER), ("disabled", C_ACCENT_DIS)],
                    foreground=[("disabled", "#ffffff")], bordercolor=[("active", C_ACCENT_HOVER)])
+        cta, cta_h = C_CTA or C_ACCENT, C_CTA_HOVER or C_ACCENT_HOVER
+        st.configure("Cta.TButton", background=cta, foreground="#ffffff", bordercolor=cta, lightcolor=cta,
+                     darkcolor=cta, font=(FONT, 10, "bold"), padding=(14, 7))
+        st.map("Cta.TButton", background=[("active", cta_h), ("disabled", _mix(cta, C_CARD, 0.55))],
+               foreground=[("disabled", "#ffffff")], bordercolor=[("active", cta_h)])
         st.configure("Success.TButton", background=C_ACCENT, foreground=C_ON_ACCENT, bordercolor=C_ACCENT,
                      lightcolor=C_ACCENT, darkcolor=C_ACCENT, font=(FONT, 10, "bold"), padding=(16, 7))
         st.map("Success.TButton", background=[("active", C_ACCENT_HOVER), ("disabled", C_ACCENT_DIS)])
@@ -2218,6 +2318,8 @@ class App(tk.Tk):
             self.after(10, lambda: self.toggle_sidebar(True))
 
     def _side_drag(self, e):
+        if LAYOUT != "classic":
+            return
         w = e.x_root - self.side.winfo_rootx()
         if getattr(self, "side_collapsed", False):
             if w < SIDE_MIN:
@@ -2243,6 +2345,8 @@ class App(tk.Tk):
 
     def toggle_sidebar(self, collapse=None):
         """Thu gọn / mở rộng thanh bên trái (Ctrl+B)."""
+        if LAYOUT != "classic":
+            return
         if collapse is None:
             collapse = not getattr(self, "side_collapsed", False)
         self.side_collapsed = collapse
@@ -2960,13 +3064,18 @@ class App(tk.Tk):
 
     # ================================================================ TAB QUÉT & TẢI
     def _build_scan(self):
+        if LAYOUT == "workspace":
+            return self._build_scan_ws()
+        if LAYOUT == "movie":
+            return self._build_scan_movie()
         cards = ttk.Frame(self.tab_scan, style="Card.TFrame")
         cards.pack(fill="x")
         self.stat_vars = {}
-        for i, (key, title, color, glyph) in enumerate((("folders", "Thư mục sẽ quét", C_STAT1, "▦"),
-                                                 ("new", "File mới chưa có", C_BLUE, "●"),
-                                                 ("dl", "Đang tải", C_ORANGE, "⬇"),
-                                                 ("owned", "Danh sách đã có", C_GREEN, "✔"))):
+        sc = STAT_COLORS or (C_STAT1, C_BLUE, C_ORANGE, C_GREEN)
+        for i, (key, title, color, glyph) in enumerate((("folders", "Thư mục sẽ quét", sc[0], "▦"),
+                                                 ("new", "File mới chưa có", sc[1], "●"),
+                                                 ("dl", "Đang tải", sc[2], "⬇"),
+                                                 ("owned", "Danh sách đã có", sc[3], "✔"))):
             card, var = self._stat_card(cards, title, color, glyph)
             card.grid(row=0, column=i, sticky="we", padx=(0 if i == 0 else 10, 0))
             cards.columnconfigure(i, weight=1)
@@ -2997,7 +3106,7 @@ class App(tk.Tk):
         self.sel_var = tk.StringVar(value="Đã chọn: 0")
         tk.Label(r1, textvariable=self.sel_var, bg=C_SOFT, fg=C_ACCENT, font=(FONT, 10, "bold")
                  ).pack(side="left", padx=12)
-        self.btn_dl_sel = ttk.Button(r1, text="⬇  Tải mục đã chọn", style="Accent.TButton",
+        self.btn_dl_sel = ttk.Button(r1, text="⬇  Tải mục đã chọn", style="Cta.TButton",
                                      command=self.start_download_selected, state="disabled")
         self.btn_dl_sel.pack(side="right")
         self.btn_own_sel = ttk.Button(r1, text="☑  Đánh dấu đã có", command=self.mark_selected_owned,
@@ -3045,10 +3154,16 @@ class App(tk.Tk):
         q = strip_accents(self.scan_search_var.get().strip())
         if q and q not in strip_accents(" ".join(str(v) for v in self.scan_tree.item(iid, "values"))):
             return False
+        mv = getattr(self, "mv_sel", None)
+        if mv:
+            it = self.scan_items.get(iid)
+            if not it or it[4] != mv:
+                return False
         show = self.scan_show_var.get()
         tags = self.scan_tree.item(iid, "tags")
-        return {"Tất cả": True, "Mới": "new" in tags, "Đang tải": "dl" in tags or "done" in tags,
-                "Lỗi": "err" in tags, "Chưa duyệt": "skip" in tags,
+        return {"Tất cả": True, "Mới": "new" in tags,
+                "Đang tải": "dl" in tags or ("done" in tags and LAYOUT == "classic"),
+                "Lỗi": "err" in tags, "Chưa duyệt": "skip" in tags, "Xong": "done" in tags,
                 "Đã chọn": iid in self.checked}.get(show, True)
 
     def _set_row(self, iid, status, tag):
@@ -3310,7 +3425,10 @@ class App(tk.Tk):
         try:
             if probs:
                 self.side_health.config(text="⚠ " + "\n⚠ ".join(probs))
-                self.side_health.pack(fill="x", pady=(4, 0), before=self.side_pk)
+                if LAYOUT == "classic":
+                    self.side_health.pack(fill="x", pady=(4, 0), before=self.side_pk)
+                else:
+                    self.side_health.pack(fill="x", pady=(8, 0))
             else:
                 self.side_health.pack_forget()
         except (AttributeError, tk.TclError):
@@ -3635,7 +3753,7 @@ class App(tk.Tk):
         try:
             if n:
                 self.side_err.config(text=f"⚠ {n} báo cáo lỗi - bấm để COPY báo cáo mới nhất (dán vào Claude)")
-                self.side_err.pack(fill="x", pady=(6, 0))
+                self.side_err.pack(fill="x", pady=(6 if LAYOUT == "classic" else 8, 0))
             else:
                 self.side_err.pack_forget()
         except (AttributeError, tk.TclError):
@@ -3920,6 +4038,8 @@ class App(tk.Tk):
                         on = tag == "new"
                         self.scan_tree.insert("", "end", iid=iid, text="", values=values, tags=tags,
                                               image=self.img_on if on else self.img_off)
+                        if AVATARS:
+                            self.scan_tree.item(iid, image=self._chk_img(iid, on))
                         self.scan_order.append(iid)
                         if on:
                             self.checked.add(iid)
@@ -4497,6 +4617,1028 @@ class App(tk.Tk):
                 ttk.Button(fr, text="🗑  Xóa", style="DangerSmall.TButton",
                            command=lambda k=key: self.remove_theme(k)).grid(row=r, column=2, sticky="w", padx=6)
 
+    # ================================================================ BỐ CỤC WORKSPACE / THEO PHIM (v2.0)
+    AV_COLORS = ("#e11d48", "#7c3aed", "#0891b2", "#ea580c", "#16a34a", "#475569", "#db2777", "#0d9488",
+                 "#2563eb", "#ca8a04")
+
+    @staticmethod
+    def _initials(name):
+        words = [w for w in re.split(r"[\s\-_.·]+", str(name or "").strip()) if w and w[0].isalnum()]
+        if not words:
+            return "?"
+        if len(words) == 1:
+            return words[0][:2].upper()
+        return (words[0][0] + words[1][0]).upper()
+
+    def _av_color(self, name):
+        return self.AV_COLORS[int(hashlib.md5(str(name).encode("utf-8")).hexdigest(), 16) % len(self.AV_COLORS)]
+
+    def _pil_font(self, size, bold=True):
+        from PIL import ImageFont
+        key = (size, bold)
+        cache = self.__dict__.setdefault("_pil_fonts", {})
+        if key not in cache:
+            f = None
+            for nm in (("segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf") if bold else
+                       ("segoeui.ttf", "arial.ttf", "DejaVuSans.ttf")):
+                try:
+                    f = ImageFont.truetype(nm, size)
+                    break
+                except OSError:
+                    continue
+            cache[key] = f or ImageFont.load_default()
+        return cache[key]
+
+    def _avatar_pil(self, name, size):
+        from PIL import Image, ImageDraw
+        sc = 3                                      # vẽ to rồi thu nhỏ cho mịn
+        S = size * sc
+        im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        d.rounded_rectangle((0, 0, S - 1, S - 1), radius=int(S * 0.26), fill=self._av_color(name))
+        txt = self._initials(name)
+        f = self._pil_font(int(S * 0.40))
+        try:
+            bb = d.textbbox((0, 0), txt, font=f)
+            tw, th = bb[2] - bb[0], bb[3] - bb[1]
+            d.text(((S - tw) / 2 - bb[0], (S - th) / 2 - bb[1]), txt, font=f, fill="#ffffff")
+        except Exception:
+            pass
+        return im.resize((size, size), Image.LANCZOS)
+
+    def avatar_img(self, name, size=26):
+        """Ảnh vuông bo góc có 2 chữ cái đầu tên phim (cần Pillow). Không có Pillow -> None."""
+        if not AVATARS or PILImage is None:
+            return None
+        key = ("av", name, size)
+        cache = self.__dict__.setdefault("_img_cache", {})
+        if key not in cache:
+            try:
+                from PIL import ImageTk
+                cache[key] = ImageTk.PhotoImage(self._avatar_pil(name, size))
+            except Exception:
+                cache[key] = None
+        return cache[key]
+
+    def _chk_img(self, iid, on):
+        """Ảnh cột đầu bảng Quét & Tải: ô chọn (+ ảnh chữ tên phim ở bố cục Workspace / Theo phim)."""
+        if not AVATARS or PILImage is None:
+            return self.img_on if on else self.img_off
+        try:
+            name = str(self.scan_tree.item(iid, "values")[0])
+        except (tk.TclError, IndexError):
+            return self.img_on if on else self.img_off
+        key = ("chk", name, bool(on))
+        cache = self.__dict__.setdefault("_img_cache", {})
+        if key not in cache:
+            try:
+                from PIL import Image, ImageDraw, ImageTk
+                sc, h = 3, 26
+                W = (18 + 10 + h) * sc
+                im = Image.new("RGBA", (W, h * sc), (0, 0, 0, 0))
+                d = ImageDraw.Draw(im)
+                y = (h - 18) // 2 * sc
+                box = (0, y, 18 * sc - 1, y + 18 * sc - 1)
+                if on:
+                    d.rounded_rectangle(box, radius=4 * sc, fill=C_ACCENT)
+                    d.line([(4 * sc, y + 9 * sc), (8 * sc, y + 13 * sc), (14 * sc, y + 5 * sc)],
+                           fill=C_ON_ACCENT, width=2 * sc)
+                else:
+                    d.rounded_rectangle(box, radius=4 * sc, fill=C_FIELD, outline=C_CHECK_BORDER, width=2 * sc)
+                im.paste(self._avatar_pil(name, h * sc), ((18 + 10) * sc, 0))
+                cache[key] = ImageTk.PhotoImage(im.resize((W // sc, h), Image.LANCZOS))
+            except Exception:
+                cache[key] = None
+        return cache[key] or (self.img_on if on else self.img_off)
+
+    def _hidden_side_attrs(self, host):
+        """Các ô của thanh bên cũ mà phần lõi vẫn cập nhật - tạo sẵn (ẩn) cho bố cục mới."""
+        mk = lambda **kw: tk.Label(host, text="", bg=C_CARD, fg=C_MUTED, **kw)
+        for nm in ("side_owned", "side_auto", "side_last", "side_bk", "side_pk", "side_rd", "side_foot"):
+            if not hasattr(self, nm):
+                setattr(self, nm, mk())
+        self._side_wraps = []
+
+    def _alerts_bar(self, parent):
+        self.alerts = tk.Frame(parent, bg=C_BG)
+        self.alerts.pack(fill="x", padx=18)
+        self.side_health = tk.Label(self.alerts, text="", bg=C_WARN_BG, fg=C_ORANGE, font=(FONT, 9, "bold"),
+                                    anchor="w", justify="left", padx=10, pady=6, wraplength=1100)
+        self.side_err = tk.Label(self.alerts, text="", bg=C_ERR_BG, fg=C_ERR_FG, font=(FONT, 9, "bold"), anchor="w",
+                                 justify="left", cursor="hand2", padx=10, pady=6)
+        self.side_err.bind("<Button-1>", self.copy_last_report)
+
+    def _icon_btn(self, parent, text, cmd, bg=None, fg=None, tip_dot=False):
+        bg = bg or C_CARD
+        b = tk.Label(parent, text=text, bg=bg, fg=fg or C_TEXT, font=(FONT, 11), width=3, pady=5, cursor="hand2",
+                     highlightbackground=C_BORDER, highlightthickness=1)
+        b.bind("<Button-1>", lambda e: cmd())
+        b.bind("<Enter>", lambda e: b.config(bg=C_BTN_HOVER))
+        b.bind("<Leave>", lambda e: b.config(bg=bg))
+        return b
+
+    def _ws_statusbar(self, parent):
+        bar = tk.Frame(parent, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1)
+        bar.pack(fill="x", side="bottom")
+        inner = tk.Frame(bar, bg=C_CARD, padx=18, pady=5)
+        inner.pack(fill="x")
+        self.ws_dots = {}
+        for key, text in (("pk", "PikPak"), ("rc", "rclone"), ("bk", "Sao lưu"), ("pc", "⌂ " + MACHINE)):
+            f = tk.Frame(inner, bg=C_CARD)
+            f.pack(side="left", padx=(0, 18))
+            dot = tk.Label(f, text="●" if key != "pc" else "", bg=C_CARD, fg=C_MUTED, font=(FONT, 8))
+            dot.pack(side="left")
+            lb = tk.Label(f, text=text, bg=C_CARD, fg=C_MUTED, font=(FONT, 9))
+            lb.pack(side="left", padx=(3, 0))
+            self.ws_dots[key] = (dot, lb)
+        self.progress = ttk.Progressbar(inner, style="Pro.Horizontal.TProgressbar", mode="determinate", length=160)
+        self.progress.pack(side="right")
+        self.status_var = tk.StringVar(value="Sẵn sàng.")
+        tk.Label(inner, textvariable=self.status_var, bg=C_CARD, fg=C_MUTED, font=(FONT, 9)).pack(side="right",
+                                                                                                 padx=12)
+
+    # ---------------------------------------------------------------- Workspace (ảnh 6 / 7)
+    def _build_ws_layout(self, body):
+        side = tk.Frame(body, bg=C_SIDE, width=236)
+        side.pack(side="left", fill="y")
+        side.pack_propagate(False)
+        self.side = side
+        tk.Frame(body, bg=C_BORDER, width=1).pack(side="left", fill="y")
+        main = tk.Frame(body, bg=C_BG)
+        main.pack(side="left", fill="both", expand=True)
+        # ----- thanh trên: đường dẫn + tiêu đề | tìm kiếm · Chỉ quét · Quét & Tải · ◐ 🔒 ⟳
+        top = tk.Frame(main, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1)
+        top.pack(fill="x")
+        ti = tk.Frame(top, bg=C_CARD, padx=24, pady=10)
+        ti.pack(fill="x")
+        left = tk.Frame(ti, bg=C_CARD)
+        left.pack(side="left")
+        self.top_sub = tk.Label(left, text="", bg=C_CARD, fg=C_MUTED, font=(FONT, 9), anchor="w")
+        self.top_sub.pack(anchor="w")
+        self.top_title = tk.Label(left, text="", bg=C_CARD, fg=C_TEXT, font=(FONT, 17, "bold"), anchor="w")
+        self.top_title.pack(anchor="w")
+        right = tk.Frame(ti, bg=C_CARD)
+        right.pack(side="right")
+        self.top_upd = self._icon_btn(right, "⟳", lambda: self.check_update(silent=False))
+        self.top_upd.pack(side="right")
+        self.top_lock = self._icon_btn(right, "🔒", lambda: self.admin_lock() if self.admin_is_unlocked() else (
+            self.admin_unlock() and self.status_var.set("🔓 Đã mở khóa tab Thư mục phim / Cài đặt.")))
+        self.top_lock.pack(side="right", padx=(0, 8))
+        if len(removed_themes(self.cfg)) < len(THEMES) - 1:
+            self.top_theme = self._icon_btn(right, "◐", lambda: self._theme_menu(self.top_theme))
+            self.top_theme.pack(side="right", padx=(0, 8))
+        tk.Frame(right, bg=C_BORDER, width=1, height=28).pack(side="right", padx=12)
+        self.btn_stop = ttk.Button(right, text="■", style="Danger.TButton", width=3, command=self.stop_flag.set,
+                                   state="disabled")
+        self.btn_stop.pack(side="right", padx=(6, 0))
+        self.btn_go = ttk.Button(right, text="⬇  Quét & Tải", style="Accent.TButton",
+                                 command=lambda: self.start_scan(True))
+        self.btn_go.pack(side="right")
+        self.btn_scan = ttk.Button(right, text="⌕  Chỉ quét", command=lambda: self.start_scan(False))
+        self.btn_scan.pack(side="right", padx=(0, 8))
+        self.scan_search_var = tk.StringVar()
+        sf = tk.Frame(right, bg=C_FIELD, highlightbackground=C_BORDER, highlightthickness=1)
+        sf.pack(side="right", padx=(0, 14))
+        tk.Label(sf, text="⌕", bg=C_FIELD, fg=C_MUTED, font=(FONT, 10)).pack(side="left", padx=(8, 2))
+        se = tk.Entry(sf, textvariable=self.scan_search_var, width=30, relief="flat", bg=C_FIELD, fg=C_TEXT,
+                      insertbackground=C_TEXT, font=(FONT, 10))
+        se.pack(side="left", ipady=5)
+        tk.Label(sf, text="Ctrl K", bg=C_PANEL, fg=C_MUTED, font=(FONT, 8), padx=4).pack(side="left", padx=6)
+        self.bind_all("<Control-k>", lambda e: (self.select_page("scan"), se.focus_set()))
+        self.top_auto = tk.Label(top, text="")              # (ẩn) chữ "Quét lần tới" kiểu cũ
+        self._alerts_bar(main)
+        self._ws_statusbar(main)
+        nb = self._make_notebook(main)
+        nb.pack(fill="both", expand=True, padx=18, pady=(14, 0))
+
+        # ----- thanh bên: logo · LÀM VIỆC · QUẢN LÝ · thẻ Thư viện · thẻ Tự quét
+        brand = tk.Frame(side, bg=C_SIDE)
+        brand.pack(fill="x", padx=16, pady=(16, 12))
+        if self.icon_small:
+            tk.Label(brand, image=self.icon_small, bg=C_SIDE).pack(side="left", padx=(0, 10))
+        bt = tk.Frame(brand, bg=C_SIDE)
+        bt.pack(side="left")
+        tk.Label(bt, text=APP_TITLE, bg=C_SIDE, fg=C_SIDE_BRAND, font=(FONT, 12, "bold")).pack(anchor="w")
+        tk.Label(bt, text=APP_VERSION.replace(" by ", " · "), bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 8)).pack(anchor="w")
+        self.nav = {}
+        frames = {"folders": self.tab_folders, "scan": self.tab_scan, "history": self.tab_history,
+                  "settings": self.tab_settings}
+
+        def group(text):
+            tk.Label(side, text=text, bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 8, "bold")).pack(anchor="w", padx=20,
+                                                                                            pady=(12, 4))
+
+        def item(key, icon, text, hint, n):
+            row = tk.Frame(side, bg=C_SIDE, cursor="hand2")
+            row.pack(fill="x", padx=10, pady=1)
+            bar = tk.Frame(row, bg=C_SIDE, width=3)
+            bar.pack(side="left", fill="y")
+            ic = tk.Label(row, text=icon, bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 11), width=2)
+            ic.pack(side="left", padx=(8, 6), pady=7)
+            lb = tk.Label(row, text=text, bg=C_SIDE, fg=C_SIDE_TEXT, font=(FONT, 10, "bold"))
+            lb.pack(side="left")
+            badge = tk.Label(row, text="", bg=C_ACCENT, fg=C_ON_ACCENT, font=(MONO, 8, "bold"), padx=6)
+            hint_l = tk.Label(row, text=hint, bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 8))
+            hint_l.pack(side="right", padx=8)
+            self.nav[key] = {"row": row, "bar": bar, "icon": ic, "label": lb, "badge": badge, "frame": frames[key],
+                             "hint": hint_l}
+            for w in (row, ic, lb, badge, hint_l):
+                w.bind("<Button-1>", lambda e, k=key: self.select_page(k))
+                w.bind("<Enter>", lambda e, k=key: self._nav_hover(k, True))
+                w.bind("<Leave>", lambda e, k=key: self._nav_hover(k, False))
+            self.bind_all(f"<Control-Key-{n}>", lambda e, k=key: self.select_page(k))
+        group("LÀM VIỆC")
+        item("scan", "⬇", "Quét & Tải", "", 2)
+        item("history", "☰", "Lịch sử tải", "Ctrl+3", 3)
+        group("QUẢN LÝ  🔒")
+        item("folders", "▦", "Thư mục phim", "", 1)
+        item("settings", "⚙", "Cài đặt", "", 4)
+
+        bottom = tk.Frame(side, bg=C_SIDE)
+        bottom.pack(side="bottom", fill="x", padx=12, pady=(0, 12))
+        lib = tk.Frame(bottom, bg=C_SIDE_CARD, padx=12, pady=10)
+        lib.pack(fill="x", pady=(0, 8))
+        tk.Label(lib, text="THƯ VIỆN", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 8, "bold")).pack(anchor="w")
+        r = tk.Frame(lib, bg=C_SIDE_CARD)
+        r.pack(anchor="w")
+        self.ws_lib_num = tk.Label(r, text="0", bg=C_SIDE_CARD, fg=C_SIDE_BRAND, font=(FONT, 18, "bold"))
+        self.ws_lib_num.pack(side="left")
+        tk.Label(r, text=" tập đã có", bg=C_SIDE_CARD, fg=C_SIDE_TEXT, font=(FONT, 9)).pack(side="left", pady=(6, 0))
+        self.ws_lib_sub = tk.Label(lib, text="", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 8), anchor="w",
+                                   justify="left", wraplength=190)
+        self.ws_lib_sub.pack(anchor="w")
+        self.ws_lib_bar = EnergyBar(lib, C_SIDE_CARD, height=10, colors=(C_GREEN, C_GREEN),
+                                    empty=_mix(C_SIDE_CARD, C_SIDE_MUTED, 0.3))
+        self.ws_lib_bar.pack(fill="x", pady=(6, 0))
+        au = tk.Frame(bottom, bg=C_SIDE_CARD, padx=12, pady=10)
+        au.pack(fill="x")
+        r = tk.Frame(au, bg=C_SIDE_CARD)
+        r.pack(fill="x")
+        tk.Label(r, text="Tự quét", bg=C_SIDE_CARD, fg=C_SIDE_TEXT, font=(FONT, 10, "bold")).pack(side="left")
+        self.ws_switch = tk.Canvas(r, width=38, height=20, bg=C_SIDE_CARD, highlightthickness=0, cursor="hand2")
+        self.ws_switch.pack(side="right")
+        self.ws_switch.bind("<Button-1>", lambda e: (self.auto_var.set(not self.auto_var.get()), self._auto_changed(),
+                                                     self._ws_draw_switch()))
+        self.ws_count = tk.Label(au, text="--:--", bg=C_SIDE_CARD, fg=C_SIDE_BRAND, font=(FONT, 20, "bold"))
+        self.ws_count.pack(anchor="w")
+        self.ws_count_sub = tk.Label(au, text="", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 8), anchor="w")
+        self.ws_count_sub.pack(anchor="w")
+        self.ws_count_bar = EnergyBar(au, C_SIDE_CARD, height=10, colors=(C_SIDE_ACTIVE, C_SIDE_ACTIVE),
+                                      empty=_mix(C_SIDE_CARD, C_SIDE_MUTED, 0.3))
+        self.ws_count_bar.pack(fill="x", pady=(6, 0))
+        r2 = tk.Frame(au, bg=C_SIDE_CARD)
+        r2.pack(fill="x", pady=(6, 0))
+        tk.Label(r2, text="mỗi", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 8)).pack(side="left")
+        cb = ttk.Combobox(r2, textvariable=self.interval_var, values=INTERVAL_CHOICES, width=4, state="readonly")
+        cb.pack(side="left", padx=4)
+        cb.bind("<<ComboboxSelected>>", lambda e: self._auto_changed())
+        tk.Label(r2, text="phút", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 8)).pack(side="left")
+        self._hidden_side_attrs(side)
+        self._ws_draw_switch()
+
+    def _ws_draw_switch(self):
+        c = getattr(self, "ws_switch", None)
+        if c is None:
+            return
+        on = bool(self.auto_var.get())
+        c.delete("all")
+        col = C_GREEN if on else _mix(C_SIDE_CARD, C_SIDE_MUTED, 0.45)
+        c.create_oval(1, 1, 19, 19, fill=col, outline="")
+        c.create_oval(19, 1, 37, 19, fill=col, outline="")
+        c.create_rectangle(10, 1, 28, 19, fill=col, outline="")
+        x = 21 if on else 3
+        c.create_oval(x, 3, x + 14, 17, fill="#ffffff", outline="")
+
+    def _build_scan_ws(self):
+        t = self.tab_scan
+        # ----- hàng thẻ: 4 thẻ số + thẻ ĐANG TẢI
+        cards = tk.Frame(t, bg=C_CARD)
+        cards.pack(fill="x")
+        self.stat_vars = {k: tk.StringVar() for k in ("folders", "new", "dl", "owned")}
+        self.ws_stat = {}
+        sc = STAT_COLORS or (C_ACCENT, C_ACCENT, C_GREEN, C_RED)
+        for i, (key, icon, title) in enumerate((("folders", "▦", "Thư mục theo dõi"), ("new", "●", "Tập mới"),
+                                                ("today", "✔", "Xong hôm nay"), ("err", "!", "Lỗi cần xem"))):
+            card = tk.Frame(cards, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1, padx=14, pady=12)
+            card.grid(row=0, column=i, sticky="nswe", padx=(0, 10))
+            cards.columnconfigure(i, weight=1)
+            hr = tk.Frame(card, bg=C_CARD)
+            hr.pack(anchor="w")
+            tk.Label(hr, text=icon, bg=_mix(C_CARD, sc[i], 0.14), fg=sc[i], font=(FONT, 9, "bold"), width=2).pack(
+                side="left")
+            tk.Label(hr, text=title, bg=C_CARD, fg=C_TEXT, font=(FONT, 9)).pack(side="left", padx=(6, 0))
+            num = tk.Label(card, text="0", bg=C_CARD, fg=C_TEXT, font=(FONT, 22, "bold"))
+            num.pack(anchor="w", pady=(6, 0))
+            sub = tk.Label(card, text="", bg=C_CARD, fg=C_MUTED, font=(FONT, 8), anchor="w", justify="left",
+                           wraplength=170)
+            sub.pack(anchor="w")
+            self.ws_stat[key] = (num, sub)
+        dl = tk.Frame(cards, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1, padx=14, pady=10)
+        dl.grid(row=0, column=4, sticky="nswe")
+        cards.columnconfigure(4, weight=3)
+        self._build_energy_card(dl)
+
+        # ----- bảng: tab lọc · ô lọc · thao tác chọn
+        box = tk.Frame(t, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1)
+        box.pack(fill="both", expand=True, pady=(14, 0))
+        hb = tk.Frame(box, bg=C_CARD, padx=12, pady=10)
+        hb.pack(fill="x")
+        self.scan_show_var = tk.StringVar(value="Tất cả")
+        tabs = tk.Frame(hb, bg=C_PANEL, highlightbackground=C_BORDER, highlightthickness=1)
+        tabs.pack(side="left")
+        self.ws_tabs = {}
+        for name in ("Tất cả", "Mới", "Đang tải", "Lỗi", "Chưa duyệt", "Xong"):
+            b = tk.Label(tabs, text=name, bg=C_PANEL, fg=C_TEXT, font=(FONT, 9), padx=10, pady=5, cursor="hand2")
+            b.pack(side="left")
+            b.bind("<Button-1>", lambda e, n=name: self._ws_set_tab(n))
+            self.ws_tabs[name] = b
+        ff = tk.Frame(hb, bg=C_FIELD, highlightbackground=C_BORDER, highlightthickness=1)
+        ff.pack(side="left", padx=10)
+        tk.Label(ff, text="⌕", bg=C_FIELD, fg=C_MUTED).pack(side="left", padx=(6, 0))
+        tk.Entry(ff, textvariable=self.scan_search_var, width=22, relief="flat", bg=C_FIELD, fg=C_TEXT,
+                 insertbackground=C_TEXT, font=(FONT, 9)).pack(side="left", ipady=4, padx=4)
+        self.scan_search_var.trace_add("write", lambda *a: self._apply_scan_filter())
+        selb = tk.Frame(hb, bg=C_SOFT, highlightbackground=C_SOFT_BORDER, highlightthickness=1, padx=6, pady=3)
+        selb.pack(side="right")
+        self.sel_var = tk.StringVar(value="Đã chọn: 0")
+        tk.Label(selb, textvariable=self.sel_var, bg=C_SOFT, fg=C_ACCENT, font=(FONT, 9, "bold")).pack(side="left",
+                                                                                                     padx=6)
+        self.btn_own_sel = ttk.Button(selb, text="☑  Đánh dấu đã có", style="Small.TButton",
+                                      command=self.mark_selected_owned, state="disabled")
+        self.btn_own_sel.pack(side="left", padx=4)
+        self.btn_dl_sel = ttk.Button(selb, text="⬇  Tải mục đã chọn", style="Cta.TButton",
+                                     command=self.start_download_selected, state="disabled")
+        self.btn_dl_sel.pack(side="left", padx=4)
+        ttk.Button(selb, text="Bỏ chọn", style="Small.TButton", command=lambda: self.check_all(False)).pack(
+            side="left", padx=(4, 0))
+        self._scan_tree_common(box)
+        self._ws_set_tab("Tất cả")
+
+        # ----- nhật ký phía dưới: Nhật ký · Lỗi · Hàng đợi
+        self._build_log_panel(t)
+
+    def _scan_tree_common(self, parent, hide=("note",)):
+        wrap, self.scan_tree = self._tree(parent, ("folder", "note", "name", "date", "size", "status"),
+                                          ("PHIM", "GHI CHÚ", "TÊN FILE", "NGÀY UP", "DUNG LƯỢNG", "TRẠNG THÁI"),
+                                          (200, 150, 330, 110, 100, 230), height=10, check=True,
+                                          stretch=("folder", "name"))
+        wrap.pack(fill="both", expand=True)
+        if AVATARS and PILImage is not None:
+            self.scan_tree.column("#0", width=72, minwidth=72)
+        self.scan_tree["displaycolumns"] = [c for c in ("folder", "note", "name", "date", "size", "status")
+                                            if c not in hide]
+        self.checked = set()
+        self.scan_tree.heading("#0", image=self.img_off, anchor="center", command=self._toggle_all_header)
+        self.scan_tree.bind("<Button-1>", self._on_tree_click, add="+")
+        self.scan_tree.bind("<space>", self._toggle_selected_rows)
+        self.scan_tree.bind("<Double-1>", self._open_selected)
+        self.scan_tree.bind("<<TreeviewSelect>>", lambda e: self._show_full(self.scan_tree))
+        self.scan_items = {}
+        self.scan_order = []
+        self.scan_sort = (None, False)
+        for c in ("folder", "note", "name", "date", "size", "status"):
+            self.scan_tree.heading(c, command=lambda c=c: self._sort_scan(c))
+        return wrap
+
+    def _ws_set_tab(self, name):
+        self.scan_show_var.set(name)
+        for n, b in getattr(self, "ws_tabs", {}).items():
+            on = n == name
+            b.config(bg=C_CARD if on else C_PANEL, fg=C_TEXT if on else C_MUTED,
+                     font=(FONT, 9, "bold" if on else "normal"))
+        self._apply_scan_filter()
+
+    def _build_energy_card(self, card):
+        """Thẻ ĐANG TẢI: tên file · % lớn · thanh tải · My PikPak · Tổng đợt (dùng chung self.energy)."""
+        hr = tk.Frame(card, bg=C_CARD)
+        hr.pack(fill="x")
+        tk.Label(hr, text="●  ĐANG TẢI", bg=C_CARD, fg=C_ORANGE, font=(FONT, 8, "bold")).pack(side="left")
+        self.ws_batch = tk.Label(hr, text="", bg=C_CARD, fg=C_MUTED, font=(FONT, 8))
+        self.ws_batch.pack(side="right")
+        r = tk.Frame(card, bg=C_CARD)
+        r.pack(fill="x", pady=(4, 0))
+        iv, pv = tk.StringVar(value="—"), tk.StringVar(value="0%")
+        tk.Label(r, textvariable=iv, bg=C_CARD, fg=C_TEXT, font=(FONT, 10, "bold"), anchor="w").pack(side="left")
+        tk.Label(r, textvariable=pv, bg=C_CARD, fg=C_ACCENT, font=(FONT, 17, "bold")).pack(side="right")
+        bar = EnergyBar(card, C_CARD, height=14, colors=ENERGY_SETS.get("dl"))
+        bar.pack(fill="x", pady=(2, 4))
+        self.energy = {"dl": (bar, iv, pv)}
+        self.ws_dl_sub = tk.Label(card, text="", bg=C_CARD, fg=C_MUTED, font=(FONT, 8), anchor="w")
+        self.ws_dl_sub.pack(anchor="w")
+        for key, text in (("up", "☁ My PikPak"), ("all", "Σ Tổng đợt")):
+            rr = tk.Frame(card, bg=C_CARD)
+            rr.pack(fill="x", pady=(2, 0))
+            tk.Label(rr, text=text, bg=C_CARD, fg=C_MUTED, font=(FONT, 8), width=12, anchor="w").pack(side="left")
+            pv2, iv2 = tk.StringVar(value="0%"), tk.StringVar()
+            tk.Label(rr, textvariable=pv2, bg=C_CARD, fg=C_TEXT, font=(FONT, 8, "bold"), width=5, anchor="e").pack(
+                side="right")
+            b2 = EnergyBar(rr, C_CARD, height=10, colors=ENERGY_SETS.get(key))
+            b2.pack(side="left", fill="x", expand=True, padx=(4, 6))
+            self.energy[key] = (b2, iv2, pv2)
+        self._batch = (0, 0)
+        self._dl_pct = 0
+
+    def _build_log_panel(self, parent):
+        lp = tk.Frame(parent, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1)
+        lp.pack(fill="x", pady=(12, 0))
+        hb = tk.Frame(lp, bg=C_CARD, padx=12, pady=6)
+        hb.pack(fill="x")
+        self.ws_log_tabs = {}
+        for name in ("Nhật ký", "Lỗi", "Hàng đợi"):
+            b = tk.Label(hb, text=name, bg=C_CARD, fg=C_MUTED, font=(FONT, 9), padx=8, cursor="hand2")
+            b.pack(side="left")
+            b.bind("<Button-1>", lambda e, n=name: self._log_tab(n))
+            self.ws_log_tabs[name] = b
+        lbl = tk.Label(hb, text="⌃ Thu gọn", bg=C_CARD, fg=C_MUTED, font=(FONT, 9), cursor="hand2")
+        lbl.pack(side="right")
+        cp = tk.Label(hb, text="⧉ Copy", bg=C_CARD, fg=C_MUTED, font=(FONT, 9), cursor="hand2")
+        cp.pack(side="right", padx=10)
+        cp.bind("<Button-1>", lambda e: (self.clipboard_clear(), self.clipboard_append(
+            self.log_box.get("1.0", "end")), self.status_var.set("⧉ Đã copy nhật ký.")))
+        body = tk.Frame(lp, bg=C_LOG_BG)
+        body.pack(fill="x")
+        self.log_box = tk.Text(body, height=5, wrap="word", font=("Consolas", 9), bg=C_LOG_BG, fg=C_LOG_FG,
+                               insertbackground="white", relief="flat", padx=12, pady=8)
+        self.log_box.pack(fill="both")
+        self.ws_alt_box = tk.Text(body, height=5, wrap="word", font=("Consolas", 9), bg=C_LOG_BG, fg=C_LOG_FG,
+                                  relief="flat", padx=12, pady=8)
+
+        def toggle(_e=None):
+            if body.winfo_ismapped():
+                body.pack_forget()
+                lbl.config(text="⌄ Mở rộng")
+            else:
+                body.pack(fill="x")
+                lbl.config(text="⌃ Thu gọn")
+        lbl.bind("<Button-1>", toggle)
+        self._log_tab("Nhật ký")
+
+    def _log_tab(self, name):
+        self._log_tab_name = name
+        for n, b in getattr(self, "ws_log_tabs", {}).items():
+            b.config(fg=C_TEXT if n == name else C_MUTED, font=(FONT, 9, "bold" if n == name else "normal"))
+        if name == "Nhật ký":
+            self.ws_alt_box.pack_forget()
+            self.log_box.pack(fill="both")
+            return
+        self.log_box.pack_forget()
+        self.ws_alt_box.pack(fill="both")
+        self.ws_alt_box.config(state="normal")
+        self.ws_alt_box.delete("1.0", "end")
+        if name == "Lỗi":
+            lines = [ln for ln in list(getattr(self, "log_lines", []))
+                     if any(x in ln for x in ("⚠", "✕", "Lỗi", "lỗi"))][-60:]
+            self.ws_alt_box.insert("end", "\n".join(lines) or "Không có lỗi.")
+        else:
+            rows = [self.scan_tree.item(i, "values") for i in self.scan_order if self.scan_tree.exists(i)
+                    and any(t in self.scan_tree.item(i, "tags") for t in ("new", "dl"))]
+            self.ws_alt_box.insert("end", "\n".join(f"{v[0]}  ·  {v[2]}  ·  {v[4]}  ·  {v[5]}" for v in rows)
+                                   or "Hàng đợi trống.")
+        self.ws_alt_box.config(state="disabled")
+
+    # ---------------------------------------------------------------- Theo phim (ảnh 5)
+    def _build_movie_layout(self, body):
+        rail = tk.Frame(body, bg=C_SIDE, width=78)
+        rail.pack(side="left", fill="y")
+        rail.pack_propagate(False)
+        self.side = rail
+        tk.Frame(body, bg=C_BORDER, width=1).pack(side="left", fill="y")
+        main = tk.Frame(body, bg=C_BG)
+        main.pack(side="left", fill="both", expand=True)
+        self.top_title = tk.Label(main, text="")             # (ẩn) tiêu đề trang
+        self.top_sub = tk.Label(main, text="")
+        self.top_auto = tk.Label(main, text="")
+        self._alerts_bar(main)
+        self._ws_statusbar(main)
+        nb = self._make_notebook(main)
+        nb.pack(fill="both", expand=True)
+        if self.icon_small:
+            tk.Label(rail, image=self.icon_small, bg=C_SIDE).pack(pady=(16, 14))
+        self.nav = {}
+        frames = {"folders": self.tab_folders, "scan": self.tab_scan, "history": self.tab_history,
+                  "settings": self.tab_settings}
+        for n, (key, icon, text) in enumerate((("scan", "⬇", "Tải"), ("history", "☰", "Lịch sử"),
+                                               ("folders", "▦", "Phim"), ("settings", "⚙", "Cài đặt")), 1):
+            row = tk.Frame(rail, bg=C_SIDE, cursor="hand2")
+            row.pack(fill="x", padx=8, pady=3)
+            bar = tk.Frame(row, bg=C_SIDE, width=3)
+            bar.pack(side="left", fill="y")
+            col = tk.Frame(row, bg=C_SIDE)
+            col.pack(side="left", fill="x", expand=True, pady=6)
+            ic = tk.Label(col, text=icon, bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 14))
+            ic.pack()
+            lb = tk.Label(col, text=text, bg=C_SIDE, fg=C_SIDE_TEXT, font=(FONT, 8))
+            lb.pack()
+            badge = tk.Label(row, text="", bg=C_ACCENT, fg=C_ON_ACCENT, font=(MONO, 7, "bold"), padx=4)
+            self.nav[key] = {"row": row, "bar": bar, "icon": ic, "label": lb, "badge": badge, "frame": frames[key],
+                             "col": col}
+            for w in (row, col, ic, lb, badge):
+                w.bind("<Button-1>", lambda e, k=key: self.select_page(k))
+                w.bind("<Enter>", lambda e, k=key: self._nav_hover(k, True))
+                w.bind("<Leave>", lambda e, k=key: self._nav_hover(k, False))
+            self.bind_all(f"<Control-Key-{n}>", lambda e, k=key: self.select_page(k))
+        bot = tk.Frame(rail, bg=C_SIDE)
+        bot.pack(side="bottom", fill="x", pady=(0, 12))
+
+        def rail_btn(icon, text, cmd):
+            f = tk.Frame(bot, bg=C_SIDE, cursor="hand2")
+            f.pack(fill="x", pady=4)
+            a = tk.Label(f, text=icon, bg=C_SIDE, fg=C_SIDE_TEXT, font=(FONT, 13))
+            a.pack()
+            b = tk.Label(f, text=text, bg=C_SIDE, fg=C_SIDE_MUTED, font=(FONT, 8))
+            b.pack()
+            for w in (f, a, b):
+                w.bind("<Button-1>", lambda e: cmd())
+            return a
+        if len(removed_themes(self.cfg)) < len(THEMES) - 1:
+            self.top_theme = rail_btn("◐", "Màu", lambda: self._theme_menu(self.top_theme))
+        self.top_lock = rail_btn("🔒", "Khóa", lambda: self.admin_lock() if self.admin_is_unlocked() else (
+            self.admin_unlock() and self.status_var.set("🔓 Đã mở khóa tab Thư mục phim / Cài đặt.")))
+        self.top_upd = rail_btn("⟳", "Bản mới", lambda: self.check_update(silent=False))
+        self._hidden_side_attrs(rail)
+
+    def _build_scan_movie(self):
+        t = self.tab_scan
+        t.configure(padding=0)
+        pw = tk.Frame(t, bg=C_BG)
+        pw.pack(fill="both", expand=True)
+        # ----- cột danh sách phim
+        lst = tk.Frame(pw, bg=C_CARD, width=290, highlightbackground=C_BORDER, highlightthickness=1)
+        lst.pack(side="left", fill="y")
+        lst.pack_propagate(False)
+        tk.Label(lst, text="Thư mục phim", bg=C_CARD, fg=C_TEXT, font=(FONT, 12, "bold")).pack(anchor="w", padx=16,
+                                                                                             pady=(14, 0))
+        self.mv_list_sub = tk.Label(lst, text="", bg=C_CARD, fg=C_MUTED, font=(FONT, 8))
+        self.mv_list_sub.pack(anchor="w", padx=16)
+        sf = tk.Frame(lst, bg=C_FIELD, highlightbackground=C_BORDER, highlightthickness=1)
+        sf.pack(fill="x", padx=14, pady=(8, 8))
+        tk.Label(sf, text="⌕", bg=C_FIELD, fg=C_MUTED).pack(side="left", padx=(6, 0))
+        self.mv_search = tk.StringVar()
+        tk.Entry(sf, textvariable=self.mv_search, relief="flat", bg=C_FIELD, fg=C_TEXT, insertbackground=C_TEXT,
+                 font=(FONT, 9)).pack(side="left", fill="x", expand=True, ipady=4, padx=4)
+        self.mv_search.trace_add("write", lambda *a: self._mv_refresh_list(force=True))
+        addb = tk.Label(lst, text="+  Thêm thư mục", bg=C_CARD, fg=C_TEXT, font=(FONT, 10), pady=8, cursor="hand2",
+                        highlightbackground=C_BORDER, highlightthickness=1)
+        addb.pack(side="bottom", fill="x", padx=14, pady=12)
+        addb.bind("<Button-1>", lambda e: self.admin_unlock() and self.open_folder_dialog())
+        cv = tk.Canvas(lst, bg=C_CARD, highlightthickness=0)
+        sb = ttk.Scrollbar(lst, orient="vertical", command=cv.yview)
+        cv.configure(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        cv.pack(fill="both", expand=True)
+        self.mv_rows = tk.Frame(cv, bg=C_CARD)
+        win = cv.create_window(0, 0, window=self.mv_rows, anchor="nw")
+        self.mv_rows.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.bind("<Configure>", lambda e: cv.itemconfigure(win, width=e.width))
+        cv.bind("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units"))
+        self.mv_canvas = cv
+        self.mv_sel = None            # mã thư mục phim đang xem (None = tất cả)
+        self._mv_sig = None
+
+        # ----- phần chính
+        right = tk.Frame(pw, bg=C_BG)
+        right.pack(side="left", fill="both", expand=True)
+        head = tk.Frame(right, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1)
+        head.pack(fill="x")
+        hi = tk.Frame(head, bg=C_CARD, padx=22, pady=12)
+        hi.pack(fill="x")
+        self.mv_avatar = tk.Label(hi, bg=C_CARD)
+        self.mv_avatar.pack(side="left", padx=(0, 14))
+        tt = tk.Frame(hi, bg=C_CARD)
+        tt.pack(side="left")
+        self.mv_title = tk.Label(tt, text="Tất cả phim", bg=C_CARD, fg=C_TEXT, font=(FONT, 16, "bold"))
+        self.mv_title.pack(anchor="w")
+        self.mv_chips = tk.Frame(tt, bg=C_CARD)
+        self.mv_chips.pack(anchor="w", pady=(2, 0))
+        hr = tk.Frame(hi, bg=C_CARD)
+        hr.pack(side="right")
+        self.btn_stop = ttk.Button(hr, text="■", style="Danger.TButton", width=3, command=self.stop_flag.set,
+                                   state="disabled")
+        self.btn_stop.pack(side="right", padx=(6, 0))
+        self.btn_go = ttk.Button(hr, text="⬇  Quét & Tải tất cả", style="Accent.TButton",
+                                 command=lambda: self.start_scan(True))
+        self.btn_go.pack(side="right")
+        self.btn_scan = ttk.Button(hr, text="⌕  Quét phim này", command=self._mv_scan_this)
+        self.btn_scan.pack(side="right", padx=8)
+        self.mv_edit = ttk.Button(hr, text="✎  Sửa", command=self._mv_edit)
+        self.mv_edit.pack(side="right")
+        body = tk.Frame(right, bg=C_BG, padx=22, pady=14)
+        body.pack(fill="both", expand=True)
+        cards = tk.Frame(body, bg=C_BG)
+        cards.pack(fill="x")
+        self.stat_vars = {k: tk.StringVar() for k in ("folders", "new", "dl", "owned")}
+        self.mv_stat = []
+        for i, (icon, color) in enumerate((("▦", C_ACCENT), ("✔", C_GREEN), ("●", C_ACCENT), ("!", C_RED))):
+            c = tk.Frame(cards, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1, padx=14, pady=10)
+            c.grid(row=0, column=i, sticky="we", padx=(0 if i == 0 else 10, 0))
+            cards.columnconfigure(i, weight=1)
+            tk.Label(c, text=icon, bg=_mix(C_CARD, color, 0.14), fg=color, font=(FONT, 12, "bold"), width=3,
+                     pady=6).pack(side="left", padx=(0, 10))
+            tc = tk.Frame(c, bg=C_CARD)
+            tc.pack(side="left")
+            num = tk.Label(tc, text="0", bg=C_CARD, fg=C_TEXT, font=(FONT, 16, "bold"))
+            num.pack(anchor="w")
+            sub = tk.Label(tc, text="", bg=C_CARD, fg=C_MUTED, font=(FONT, 8))
+            sub.pack(anchor="w")
+            self.mv_stat.append((num, sub))
+        tb = tk.Frame(body, bg=C_BG)
+        tb.pack(fill="x", pady=(14, 8))
+        tabs = tk.Frame(tb, bg=C_PANEL, highlightbackground=C_BORDER, highlightthickness=1)
+        tabs.pack(side="left")
+        self.scan_show_var = tk.StringVar(value="Tất cả")
+        self.scan_search_var = tk.StringVar()
+        self.mv_tab = "Tất cả"
+        self.ws_tabs = {}
+        for name in ("Tất cả", "Mới", "Đã có", "Lỗi"):
+            b = tk.Label(tabs, text=name, bg=C_PANEL, fg=C_TEXT, font=(FONT, 9), padx=12, pady=5, cursor="hand2")
+            b.pack(side="left")
+            b.bind("<Button-1>", lambda e, n=name: self._mv_set_tab(n))
+            self.ws_tabs[name] = b
+        selb = tk.Frame(tb, bg=C_SOFT, highlightbackground=C_SOFT_BORDER, highlightthickness=1, padx=6, pady=3)
+        selb.pack(side="right")
+        self.sel_var = tk.StringVar(value="Đã chọn: 0")
+        tk.Label(selb, textvariable=self.sel_var, bg=C_SOFT, fg=C_ACCENT, font=(FONT, 9, "bold")).pack(side="left",
+                                                                                                     padx=6)
+        self.btn_own_sel = ttk.Button(selb, text="☑  Đã có", style="Small.TButton",
+                                      command=self.mark_selected_owned, state="disabled")
+        self.btn_own_sel.pack(side="left", padx=4)
+        self.btn_dl_sel = ttk.Button(selb, text="⬇  Tải", style="Cta.TButton", command=self.start_download_selected,
+                                     state="disabled")
+        self.btn_dl_sel.pack(side="left", padx=(4, 0))
+        stack = tk.Frame(body, bg=C_BG)
+        stack.pack(fill="both", expand=True)
+        self.mv_scan_wrap = self._scan_tree_common(stack, hide=("note",))
+        wrap, self.mv_own_tree = self._tree(stack, ("ep", "name", "size", "added"),
+                                            ("TẬP", "TÊN FILE", "DUNG LƯỢNG", "NGÀY THÊM"), (80, 420, 110, 140),
+                                            height=10, stretch=("name",))
+        self.mv_own_wrap = wrap
+        self.mv_own_tree.bind("<Double-1>", self._mv_open_owned)
+        # ----- hàng đợi phía dưới
+        q = tk.Frame(right, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1)
+        q.pack(fill="x", side="bottom")
+        qi = tk.Frame(q, bg=C_CARD, padx=22, pady=10)
+        qi.pack(fill="x")
+        ql = tk.Frame(qi, bg=C_CARD)
+        ql.pack(side="left", padx=(0, 18))
+        tk.Label(ql, text="HÀNG ĐỢI", bg=C_CARD, fg=C_MUTED, font=(FONT, 8, "bold")).pack(anchor="w")
+        self.mv_q_num = tk.Label(ql, text="0 / 0", bg=C_CARD, fg=C_TEXT, font=(FONT, 15, "bold"))
+        self.mv_q_num.pack(anchor="w")
+        self.energy = {}
+        self.mv_q_cards = []
+        for i in range(4):
+            c = tk.Frame(qi, bg=C_CARD, highlightbackground=C_BORDER, highlightthickness=1, padx=10, pady=8)
+            c.pack(side="left", fill="x", expand=True, padx=(0, 10 if i < 3 else 0))
+            c.pack_propagate(True)
+            r = tk.Frame(c, bg=C_CARD)
+            r.pack(fill="x")
+            iv, pv = tk.StringVar(value="—"), tk.StringVar(value="")
+            tk.Label(r, textvariable=iv, bg=C_CARD, fg=C_TEXT, font=(FONT, 9, "bold"), anchor="w", width=24).pack(
+                side="left", fill="x", expand=True)
+            tk.Label(r, textvariable=pv, bg=C_CARD, fg=C_TEXT, font=(FONT, 9, "bold")).pack(side="right")
+            bar = EnergyBar(c, C_CARD, height=10, colors=ENERGY_SETS.get("up" if i == 3 else "dl"))
+            bar.pack(fill="x", pady=(6, 2))
+            sub = tk.Label(c, text="", bg=C_CARD, fg=C_MUTED, font=(FONT, 8), anchor="w")
+            sub.pack(anchor="w")
+            self.mv_q_cards.append((c, iv, pv, bar, sub))
+        c0 = self.mv_q_cards[0]
+        self.energy["dl"] = (c0[3], c0[1], c0[2])
+        c3 = self.mv_q_cards[3]
+        self.energy["up"] = (c3[3], tk.StringVar(), c3[2])
+        self.energy["all"] = (EnergyBar(q, C_CARD), tk.StringVar(), tk.StringVar())
+        self._batch = (0, 0)
+        self._dl_pct = 0
+        self.log_box = tk.Text(t, height=1)                  # (ẩn) nhật ký - xem ở tab Lịch sử / Cài đặt
+        self._mv_set_tab("Tất cả")
+        self._mv_refresh_list(force=True)
+
+    def _mv_folder(self):
+        for f in self.cfg["folders"]:
+            if fid(f) == self.mv_sel:
+                return f
+        return None
+
+    def _mv_select(self, code):
+        self.mv_sel = code
+        self._mv_refresh_list(force=True)
+        self._mv_refresh_head()
+        self._apply_scan_filter()
+        self._mv_fill_owned()
+
+    def _mv_set_tab(self, name):
+        self.mv_tab = name
+        for n, b in self.ws_tabs.items():
+            on = n == name
+            b.config(bg=C_CARD if on else C_PANEL, fg=C_TEXT if on else C_MUTED,
+                     font=(FONT, 9, "bold" if on else "normal"))
+        if name == "Đã có":
+            self.mv_scan_wrap.pack_forget()
+            self.mv_own_wrap.pack(fill="both", expand=True)
+            self._mv_fill_owned()
+        else:
+            self.mv_own_wrap.pack_forget()
+            self.mv_scan_wrap.pack(fill="both", expand=True)
+            self.scan_show_var.set(name)
+            self._apply_scan_filter()
+
+    def _mv_owned_of(self, code):
+        return [r for r in self.owned.values() if (r.get("folder") or "") == code]
+
+    def _mv_fill_owned(self):
+        tr = getattr(self, "mv_own_tree", None)
+        if tr is None:
+            return
+        tr.delete(*tr.get_children())
+        rows = []
+        codes = [self.mv_sel] if self.mv_sel else [fid(f) for f in self.cfg["folders"]]
+        for code in codes:
+            for r in self._mv_owned_of(code):
+                ep = episode_of(r.get("name", ""))
+                rows.append(((ep[1], ep[2]) if ep else (999, 0), r))
+        rows.sort(key=lambda x: x[0], reverse=True)
+        for i, (k, r) in enumerate(rows[:3000]):
+            ep = ("S%d E%d" % k if k[0] not in (0, 999) else (str(k[1]) if k[0] != 999 else "")) if k else ""
+            try:
+                sz = human_size(int(r.get("size") or 0)) if r.get("size") else ""
+            except (TypeError, ValueError):
+                sz = ""
+            when = dt.datetime.fromtimestamp(r["ts"]).strftime("%d/%m/%Y %H:%M") if r.get("ts") else ""
+            tr.insert("", "end", values=(ep, r.get("name", ""), sz, when), tags=("done",) + (("odd",) if i % 2 else ()))
+
+    def _mv_open_owned(self, _e=None):
+        sel = self.mv_own_tree.selection()
+        if not sel:
+            return
+        name = self.mv_own_tree.item(sel[0], "values")[1]
+        for h in self.history.values():
+            if h.get("name") == name:
+                p = h.get("hdd") or h.get("path")
+                if p and os.path.exists(p):
+                    open_target(os.path.dirname(p))
+                    return
+        self.status_var.set("Không tìm thấy file này trên máy (có thể đã chuyển chỗ).")
+
+    def _mv_scan_this(self):
+        f = self._mv_folder()
+        self.start_scan(False, only={fid(f)} if f else None)
+
+    def _mv_edit(self):
+        f = self._mv_folder()
+        if not f:
+            self.select_page("folders")
+            return
+        if self.admin_unlock():
+            self.open_folder_dialog(self.cfg["folders"].index(f))
+
+    def _mv_counts(self, code=None):
+        """Đếm dòng bảng Quét & Tải theo phim: (tất cả, mới, lỗi, đang tải)."""
+        a = n = e = d = 0
+        for iid in self.scan_order:
+            it = self.scan_items.get(iid)
+            if code and (not it or it[4] != code):
+                continue
+            if not self.scan_tree.exists(iid):
+                continue
+            tg = self.scan_tree.item(iid, "tags")
+            a += 1
+            n += "new" in tg
+            e += "err" in tg
+            d += "dl" in tg
+        return a, n, e, d
+
+    def _mv_refresh_list(self, force=False):
+        if not hasattr(self, "mv_rows"):
+            return
+        q = strip_accents(self.mv_search.get().strip())
+        counts = {}
+        for iid in self.scan_order:
+            it = self.scan_items.get(iid)
+            if it and self.scan_tree.exists(iid) and "new" in self.scan_tree.item(iid, "tags"):
+                counts[it[4]] = counts.get(it[4], 0) + 1
+        sig = (q, self.mv_sel, tuple((fid(f), f.get("name"), f.get("last_error", ""), f.get("reviewed"),
+                                      counts.get(fid(f), 0)) for f in self.cfg["folders"]))
+        if sig == self._mv_sig and not force:
+            return
+        self._mv_sig = sig
+        for w in self.mv_rows.winfo_children():
+            w.destroy()
+        total_new = sum(counts.values())
+        self.mv_list_sub.config(text=f"{len(self.cfg['folders'])} phim · {total_new} tập mới")
+
+        def add_row(code, name, sub, badge, bcolor):
+            on = code == self.mv_sel
+            bg = C_SEL if on else C_CARD
+            row = tk.Frame(self.mv_rows, bg=bg, cursor="hand2")
+            row.pack(fill="x")
+            tk.Frame(row, bg=C_ACCENT if on else bg, width=3).pack(side="left", fill="y")
+            img = self.avatar_img(name if code else "Tất cả", 34)
+            av = tk.Label(row, image=img, bg=bg) if img else tk.Label(row, text=self._initials(name), bg=bg,
+                                                                       fg=C_ACCENT, font=(FONT, 10, "bold"), width=3)
+            av.image = img
+            av.pack(side="left", padx=(10, 10), pady=7)
+            tc = tk.Frame(row, bg=bg)
+            tc.pack(side="left", fill="x", expand=True)
+            tk.Label(tc, text=name, bg=bg, fg=C_TEXT, font=(FONT, 10, "bold"), anchor="w").pack(anchor="w")
+            tk.Label(tc, text=sub, bg=bg, fg=C_MUTED, font=(FONT, 8), anchor="w").pack(anchor="w")
+            ws = [row, av, tc] + list(tc.winfo_children())
+            if badge:
+                b = tk.Label(row, text=badge, bg=_mix(bg, bcolor, 0.16), fg=bcolor, font=(FONT, 8, "bold"), padx=6)
+                b.pack(side="right", padx=10)
+                ws.append(b)
+            for w in ws:
+                w.bind("<Button-1>", lambda e, c=code: self._mv_select(c))
+                w.bind("<MouseWheel>", lambda e: self.mv_canvas.yview_scroll(int(-e.delta / 120), "units"))
+        add_row(None, "Tất cả phim", f"{total_new} tập trong đợt quét", str(total_new) if total_new else "", C_ACCENT)
+        for f in self.cfg["folders"]:
+            name = f.get("name") or "?"
+            if q and q not in strip_accents(name):
+                continue
+            code = fid(f)
+            last = ""
+            eps = [episode_of(r.get("name", "")) for r in self._mv_owned_of(code)]
+            eps = [e[2] for e in eps if e]
+            if eps:
+                last = f"Tập mới nhất: {max(eps)}"
+            n = counts.get(code, 0)
+            if f.get("last_error"):
+                badge, col = "!", C_RED
+            elif not f.get("reviewed"):
+                badge, col = "?", C_MUTED
+            elif n:
+                badge, col = f"+{n}", C_ORANGE
+            else:
+                badge, col = "", C_MUTED
+            add_row(code, name, last or (f.get("note") or ""), badge, col)
+        self._mv_refresh_head()
+
+    def _mv_refresh_head(self):
+        if not hasattr(self, "mv_title"):
+            return
+        f = self._mv_folder()
+        name = f.get("name") if f else "Tất cả phim"
+        self.mv_title.config(text=name)
+        img = self.avatar_img(name, 44)
+        self.mv_avatar.config(image=img or "", text="" if img else self._initials(name))
+        self.mv_avatar.image = img
+        for w in self.mv_chips.winfo_children():
+            w.destroy()
+        chips = []
+        if f:
+            chips = [one_line(f.get("note", "")), f.get("pikpak_dir", ""), from_portable(f.get("local_dir", ""))]
+        else:
+            chips = [f"{len(self.cfg['folders'])} thư mục phim"]
+        for c in [c for c in chips if c][:4]:
+            tk.Label(self.mv_chips, text=c if len(c) <= 40 else c[:37] + "...", bg=C_PANEL, fg=C_MUTED,
+                     font=(FONT, 8), padx=8, pady=1, highlightbackground=C_BORDER, highlightthickness=1).pack(
+                side="left", padx=(0, 6))
+        self.btn_scan.config(text="⌕  Quét phim này" if f else "⌕  Chỉ quét tất cả")
+        code = fid(f) if f else None
+        a, n, e, d = self._mv_counts(code)
+        own = len(self._mv_owned_of(code)) if code else len(self.owned)
+        gap = ""
+        if f and f.get("gaps"):
+            m = re.search(r"thiếu\s*([\d–,\s-]+)", str(f["gaps"][0]))
+            gap = f"Tập {m.group(1).strip()}" if m else "Có"
+        vals = ((str(f.get("total", 0)) if f else str(len(self.cfg["folders"])),
+                 "Tập trên PikPak" if f else "Thư mục phim"),
+                (str(own), "Đã có (Danh sách đã có)"),
+                (str(n), "Tập mới"),
+                ((gap or "0") if f else str(e), "Có thể thiếu" if f else "Lỗi cần xem"))
+        for (num, sub), (v, s_) in zip(self.mv_stat, vals):
+            num.config(text=v)
+            sub.config(text=s_)
+        for nm, cnt in (("Tất cả", a), ("Mới", n), ("Đã có", own), ("Lỗi", e)):
+            b = self.ws_tabs.get(nm)
+            if b:
+                b.config(text=f"{nm}  {cnt}")
+
+    def _layout_tick(self):
+        """Cập nhật các ô riêng của bố cục Workspace / Theo phim (mỗi giây)."""
+        try:
+            if LAYOUT == "workspace":
+                self._ws_refresh()
+            elif LAYOUT == "movie":
+                self._mv_refresh_list()
+                self._mv_refresh_head()
+                self._mv_refresh_queue()
+            if hasattr(self, "ws_dots"):
+                pk = getattr(self, "pk_ok", None)
+                self.ws_dots["pk"][0].config(fg=C_GREEN if pk else (C_RED if pk is False else C_MUTED))
+                self.ws_dots["pk"][1].config(text="PikPak" + (" VIP" if pk else ""))
+                rc = getattr(self, "_rc_cached", None)
+                if rc is None or time.time() - getattr(self, "_rc_t", 0) > 30:
+                    self._rc_cached, self._rc_t = bool(find_rclone()), time.time()
+                self.ws_dots["rc"][0].config(fg=C_GREEN if self._rc_cached else C_RED)
+                bk = self.cfg.get("last_backup") or ""
+                self.ws_dots["bk"][0].config(fg=C_GREEN if bk else C_MUTED)
+                self.ws_dots["bk"][1].config(text="Sao lưu " + (bk[-5:] if bk else "—"))
+        except Exception:
+            pass
+        self.after(1000, self._layout_tick)
+
+    def _ws_refresh(self):
+        on = [f for f in self.cfg["folders"] if f.get("enabled", True)]
+        unrev = sum(1 for f in on if not f.get("reviewed"))
+        today = dt.date.today()
+        done = [h for h in self.history.values() if h.get("status") == STATUS_DONE and h.get("done_ts")
+                and dt.date.fromtimestamp(h["done_ts"]) == today]
+        gb = sum(int(h.get("size") or 0) for h in done if str(h.get("size") or "").isdigit())
+        errs = [i for i in self.scan_order if self.scan_tree.exists(i) and "err" in self.scan_tree.item(i, "tags")]
+        ferr = [f for f in on if f.get("last_error")]
+        new = getattr(self, "_new_count", 0)
+        S = self.ws_stat
+        S["folders"][0].config(text=str(len(on)))
+        S["folders"][1].config(text=f"{unrev} thư mục chưa duyệt" if unrev else "tất cả đã duyệt")
+        S["new"][0].config(text=str(new))
+        S["new"][1].config(text="từ lần quét gần nhất")
+        S["today"][0].config(text=str(len(done)))
+        S["today"][1].config(text=f"{human_size(gb)} đã tải" if gb else "chưa có")
+        ne = len(errs) + len(ferr)
+        S["err"][0].config(text=str(ne))
+        first = (self.scan_tree.item(errs[0], "values")[0] if errs else (ferr[0].get("name") if ferr else ""))
+        S["err"][1].config(text=first or "không có lỗi")
+        d, n = getattr(self, "_batch", (0, 0))
+        self.ws_batch.config(text=f"{min(d + 1, n)} / {n} trong đợt" if n else "")
+        info = self.energy["dl"][1].get()
+        m = re.search(r"([\d.,]+\s*[KMG]i?B/s)", info)
+        self.ws_dl_sub.config(text=("Tốc độ " + m.group(1)) if m else "")
+        # tab lọc: số đếm
+        cnt = {"Tất cả": 0, "Mới": 0, "Đang tải": 0, "Lỗi": 0, "Chưa duyệt": 0, "Xong": 0}
+        for i in self.scan_order:
+            if not self.scan_tree.exists(i):
+                continue
+            tg = self.scan_tree.item(i, "tags")
+            cnt["Tất cả"] += 1
+            cnt["Mới"] += "new" in tg
+            cnt["Đang tải"] += "dl" in tg
+            cnt["Lỗi"] += "err" in tg
+            cnt["Chưa duyệt"] += "skip" in tg
+            cnt["Xong"] += "done" in tg
+        for nm, b in self.ws_tabs.items():
+            b.config(text=f"{nm}  {cnt.get(nm, 0)}")
+        # thẻ Thư viện + Tự quét
+        self.ws_lib_num.config(text=f"{len(self.owned):,}".replace(",", "."))
+        drv = ""
+        for f in on:
+            p = from_portable(f.get("local_dir", ""))
+            if p:
+                drv = os.path.splitdrive(os.path.abspath(p))[0] or p
+                break
+        sub = f"{len(self.cfg['folders'])} phim"
+        if drv:
+            try:
+                du = shutil.disk_usage(drv + os.sep if drv.endswith(":") else drv)
+                sub += f" · HDD {drv} còn {human_size(du.free)}"
+                self.ws_lib_bar.set(du.used * 100 / max(1, du.total))
+            except OSError:
+                pass
+        self.ws_lib_sub.config(text=sub)
+        self._ws_draw_switch()
+        if self.next_auto_ts and self.auto_var.get():
+            left = max(0, int(self.next_auto_ts - time.time()))
+            self.ws_count.config(text=f"{left // 60:02d}:{left % 60:02d}" if left < 6000 else f"{left // 3600}h")
+            iv = int(self.cfg.get("auto_interval", 60) or 60) * 60
+            self.ws_count_sub.config(text=f"đến lần quét tới · mỗi {iv // 60} phút")
+            self.ws_count_bar.set(100 - left * 100 / max(1, iv))
+        else:
+            self.ws_count.config(text="Tắt")
+            self.ws_count_sub.config(text="bật công tắc để tự quét")
+            self.ws_count_bar.set(0)
+        if getattr(self, "_log_tab_name", "Nhật ký") != "Nhật ký" and int(time.time()) % 3 == 0:
+            self._log_tab(self._log_tab_name)
+
+    def _mv_refresh_queue(self):
+        d, n = getattr(self, "_batch", (0, 0))
+        self.mv_q_num.config(text=f"{min(d + 1, n) if n else 0} / {n}")
+        busy = bool(self.worker and self.worker.is_alive())
+        pend = [i for i in self.scan_order if self.scan_tree.exists(i)
+                and any(t in self.scan_tree.item(i, "tags") for t in ("new", "dl"))]
+        dl = [i for i in pend if "dl" in self.scan_tree.item(i, "tags")]
+        nxt = [i for i in pend if i not in dl]
+        c0 = self.mv_q_cards[0]
+        if not busy:
+            c0[1].set("—" if not dl else c0[1].get())
+        info = c0[1].get()
+        m = re.search(r"([\d.,]+\s*[KMG]i?B/s)", info)
+        c0[4].config(text=("⬇ " + m.group(1)) if m else ("Đang chờ" if busy else "Sẵn sàng"))
+        c0[0].config(highlightbackground=C_ACCENT if busy else C_BORDER)
+        for k, c in enumerate(self.mv_q_cards[1:3]):
+            if k < len(nxt):
+                v = self.scan_tree.item(nxt[k], "values")
+                c[1].set(str(v[2])[:34])
+                c[2].set("0%")
+                c[3].set(0)
+                c[4].config(text=f"Chờ · {v[4]}")
+            else:
+                c[1].set("—")
+                c[2].set("")
+                c[3].set(0)
+                c[4].config(text="")
+        c3 = self.mv_q_cards[3]
+        if not c3[1].get() or c3[1].get() == "—":
+            c3[1].set("☁ My PikPak")
+        ups = len(getattr(self, "up_queued", ()) or ())
+        c3[4].config(text=f"{ups} tập đang Save" if ups else "Đã Save đủ")
+
     LOCKED_PAGES = ("folders", "settings")
 
     def select_page(self, key, ask=True):
@@ -4508,6 +5650,8 @@ class App(tk.Tk):
         self.page = key
         self.nb.select(self.nav[key]["frame"])
         t, sub = self.PAGE_INFO.get(key, ("", ""))
+        if LAYOUT == "workspace":
+            sub = ("Quản lý  /" if key in self.LOCKED_PAGES else "Làm việc  /")
         try:
             self.top_title.config(text=t)
             self.top_sub.config(text=sub)
@@ -4516,8 +5660,9 @@ class App(tk.Tk):
         for k, n in self.nav.items():
             on = k == key
             bg = C_SIDE_HOVER if on else C_SIDE
-            for w in ("row", "icon", "label"):
-                n[w].config(bg=bg)
+            for w in ("row", "icon", "label", "col", "hint"):
+                if w in n:
+                    n[w].config(bg=bg)
             n["bar"].config(bg=C_SIDE_ACTIVE if on else bg)
             n["icon"].config(fg=C_SIDE_ACTIVE if on else C_SIDE_MUTED)
             n["label"].config(fg=C_SIDE_SEL_TEXT if on else C_SIDE_TEXT)
@@ -4527,8 +5672,9 @@ class App(tk.Tk):
             return
         bg = C_SIDE_HOVER if inside else C_SIDE
         n = self.nav[key]
-        for w in ("row", "icon", "label", "bar"):
-            n[w].config(bg=bg)
+        for w in ("row", "icon", "label", "bar", "col", "hint"):
+            if w in n:
+                n[w].config(bg=bg)
 
     def set_badge(self, key, value, color=None):
         b = self.nav[key]["badge"]
@@ -4668,7 +5814,7 @@ class App(tk.Tk):
 
     def _set_check(self, iid, on):
         (self.checked.add if on else self.checked.discard)(iid)
-        self.scan_tree.item(iid, image=self.img_on if on else self.img_off)
+        self.scan_tree.item(iid, image=self._chk_img(iid, on))
 
     def check_all(self, on):
         for i in self.scan_tree.get_children():
@@ -5114,8 +6260,8 @@ class App(tk.Tk):
         # ----- 1. Chung
         g = G(self._set_pages["gen"])
         g.section("Giao diện", "⭐ Đặt mặc định: tool mở bằng giao diện đó (đổi xong tự khởi động lại).  🗑 Xóa: bỏ "
-                               "giao diện (khôi phục lại được). Giao diện gốc (v1.3) không xóa được. Flat Teal: thiết kế "
-                               "theo UI UX Pro Max (Flat Design, teal + cam).")
+                               "giao diện (khôi phục lại được). Giao diện gốc (v1.3) không xóa được. A · B · E giữ bố cục "
+                               "cũ, đổi màu + thanh % liền; Workspace và Theo phim là bố cục mới.")
         self._theme_box = g.frame()
         self._fill_theme_box(self._theme_box)
         g.section("Mật khẩu admin", "Tab Thư mục phim và Cài đặt cần mật khẩu admin mới mở được (tránh bấm nhầm). "

@@ -1,6 +1,17 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v2.0  (08/11/2026)
+  - Giữ nguyên tính năng v1.8. Bỏ giao diện Flat Teal. Thêm 6 giao diện theo ảnh mẫu:
+    · A (sáng · xanh dương), B (tối · đỏ), E (thanh bên nâu đen · vàng hổ phách): bố cục cũ,
+      thanh % dạng dải liền chuyển màu, nút "Tải mục đã chọn" màu riêng;
+    · Workspace (sáng) và Workspace tím: thanh bên có nhóm LÀM VIỆC / QUẢN LÝ, ô tìm kiếm (Ctrl+K),
+      Chỉ quét / Quét & Tải trên thanh trên, 4 thẻ số + thẻ ĐANG TẢI, tab lọc có đếm số, ảnh chữ cái tên phim,
+      nhật ký có tab Nhật ký / Lỗi / Hàng đợi, thẻ Thư viện (chỗ trống HDD) và đồng hồ đếm ngược Tự quét có công tắc;
+    · Theo phim: thanh icon bên trái, danh sách phim (ảnh chữ cái, số tập mới), bấm phim xem từng tập
+      (Tất cả / Mới / Đã có / Lỗi), Sửa · Quét phim này · Quét & Tải tất cả, hàng đợi phía dưới.
+  - Mỗi giao diện có "⭐ Đặt mặc định" và "🗑 Xóa" (trừ giao diện gốc).
+
 v1.9  (08/11/2026)
   - Giữ nguyên tính năng v1.8. Thêm GIAO DIỆN FLAT TEAL, thiết kế theo bộ UI UX Pro Max
     (github.com/nextlevelbuilder/ui-ux-pro-max-skill) - hệ thống thiết kế đề xuất cho "desktop download manager /
