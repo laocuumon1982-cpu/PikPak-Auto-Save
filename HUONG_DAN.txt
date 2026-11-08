@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v1.5 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v1.6 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -27,8 +27,8 @@ LẦN ĐẦU
    6. Tab Quét & Tải -> "Quét & Tải". Bật "Tự quét mỗi ... phút" để tool tự làm.
 
 MẸO
-   - Giao diện: nút "◐ Giao diện" trên thanh tiêu đề -> Gốc (v1.3) / Động (nền tối, LED) / Dashboard (trắng · cam
-     · đỏ). Giao diện thêm có nút "🗑 Xóa" (khôi phục ở Cài đặt > Chung > Giao diện). Giao diện gốc không xóa được.
+   - Giao diện: nút "◐ Giao diện" trên thanh tiêu đề -> Gốc (v1.3) / Mới (nền trắng, nút đỏ, thanh bên cam nhạt).
+     Giao diện mới có nút "🗑 Xóa" (khôi phục ở Cài đặt > Chung > Giao diện). Giao diện gốc không xóa được.
    - Nút "⟳ Cập nhật" góc trên: tự báo bản mới trên GitHub (laocuumon1982-cpu/PikPak-Auto-Save).
    - Lỗi: tool ghi báo cáo vào Data\BaoLoi - bấm dòng đỏ ở thanh bên để COPY, dán cho Claude sửa.
    - Thư mục Data chứa toàn bộ cài đặt / Danh sách đã có / lịch sử: lên bản mới chỉ cần chép Data sang.
