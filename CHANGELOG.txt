@@ -1,6 +1,14 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v1.5  (08/11/2026)
+  - Giữ nguyên mọi tính năng; giao diện v1.3 vẫn là GIAO DIỆN GỐC (không xóa được).
+  - Thêm GIAO DIỆN DASHBOARD: tông trắng · cam · đỏ (thanh bên đỏ đậm, nút cam), giữ kiểu Dashboard:
+    bảng số % / tốc độ / xong hôm nay / đã có dạng LED, thanh năng lượng cam → đỏ có vệt sáng chạy,
+    đèn LED trạng thái và đồng hồ số.
+  - Nút "◐ Giao diện" chọn được 3 giao diện: Gốc · Động · Dashboard. Mỗi giao diện thêm có nút "🗑 Xóa"
+    riêng; khôi phục ở Cài đặt > Chung > Giao diện.
+
 v1.4  (08/11/2026)
   - Giữ nguyên mọi tính năng; giao diện v1.3 là GIAO DIỆN GỐC (luôn có, không xóa được).
   - Thêm GIAO DIỆN ĐỘNG (nền tối, xanh neon):

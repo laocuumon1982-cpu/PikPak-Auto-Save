@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v1.4 by Duy Anh
+PikPak Auto Save v1.5 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -41,7 +41,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v1.4 by Duy Anh"
+APP_VERSION = "v1.5 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -148,6 +148,8 @@ C_CHECK_BORDER = "#b5c0cc"
 C_GLYPH = "#c3ccd6"
 ENERGY_EMPTY = "#e3e9ef"
 ENERGY_SETS = {}              # màu riêng cho từng thanh (dl / up / all); trống = dùng ENERGY_COLORS
+C_STAT1 = "#14b8a6"           # màu ô "Thư mục sẽ quét"
+DECK_COLORS = ()              # màu 4 số LED lớn (trống = theo bảng màu)
 
 # ----- 2 giao diện: "classic" = giao diện GỐC (v1.3, không xóa được) · "dynamic" = giao diện ĐỘNG (LED, đồng hồ số,
 #       thanh năng lượng chạy) - chọn bằng nút "◐ Giao diện", xóa được trong Cài đặt > Chung.
@@ -169,10 +171,41 @@ THEMES = {
         "C_FOOT": "#4f6078", "C_LOG_BG": "#050910", "C_LOG_FG": "#7dffb5", "C_CHECK_BORDER": "#2e4260",
         "C_GLYPH": "#1f2f48", "ENERGY_EMPTY": "#16223a",
         "ENERGY_COLORS": ("#00c8f0", "#00e0c0", "#22e58b", "#9cf53c", "#ffd23f", "#ffb020"),
+        "C_STAT1": "#00e0c0",
     },
 }
+THEMES["dashboard"] = {
+    "C_BG": "#f6f5f4", "C_CARD": "#ffffff", "C_PANEL": "#fffaf6", "C_FIELD": "#ffffff",
+    "C_ACCENT": "#f26b1d", "C_ACCENT_HOVER": "#d9560b", "C_ACCENT_DIS": "#fbc9a8", "C_ON_ACCENT": "#ffffff",
+    "C_SOFT": "#fff1e6", "C_SOFT_BORDER": "#fdd1b0", "C_SEL": "#ffe4d1", "C_HEAD": "#fbf3ee",
+    "C_ODD": "#fdfbf9", "C_TEXT": "#2a2523", "C_MUTED": "#7a6f69", "C_BORDER": "#efe4dc",
+    "C_GREEN": "#2f9e5b", "C_ORANGE": "#f26b1d", "C_RED": "#e0283b", "C_BLUE": "#e0283b",
+    "C_WARN_BG": "#fff3e0",
+    "C_SIDE": "#a51d24", "C_SIDE_CARD": "#b5272e", "C_SIDE_HOVER": "#c4333a", "C_SIDE_ACTIVE": "#ffb347",
+    "C_SIDE_TEXT": "#fff1ec", "C_SIDE_MUTED": "#f4bcb4",
+    "C_BTN_HOVER": "#fff1e6", "C_DIS_TEXT": "#bfb2aa",
+    "C_DANGER_BG": "#fdecec", "C_DANGER_BORDER": "#f5c2c2", "C_DANGER_HOVER": "#fadada", "C_DANGER_DIS": "#e8a9a9",
+    "C_TROUGH": "#f3e3d8", "C_SCROLL_ACT": "#e9cdbb", "C_SKIP": "#b3a69e",
+    "C_SIDE_OK": "#d9fbd2", "C_SIDE_BAD": "#ffd6c2", "C_ERR_BG": "#7a0d14", "C_ERR_FG": "#ffe0e0",
+    "C_FOOT": "#f0a99f", "C_LOG_BG": "#2a1a16", "C_LOG_FG": "#ffd9b8", "C_CHECK_BORDER": "#e2c9b9",
+    "C_GLYPH": "#f0d6c6", "ENERGY_EMPTY": "#f6e7de",
+    "ENERGY_COLORS": ("#ffb347", "#ff8c2a", "#f26b1d", "#ea4a24", "#e0283b", "#c1121f"),
+    "C_STAT1": "#ff9f1c",
+    "DECK_COLORS": ("#f26b1d", "#e0283b", "#ff9f1c", "#a51d24"),
+}
 THEME_NAMES = {"classic": "Giao diện gốc  (v1.3)",
-               "dynamic": "Giao diện động  (LED · đồng hồ số · thanh năng lượng)"}
+               "dynamic": "Giao diện động  (nền tối · LED · đồng hồ số)",
+               "dashboard": "Giao diện Dashboard  (trắng · cam · đỏ)"}
+THEME_SHORT = {"classic": "giao diện gốc", "dynamic": "giao diện động", "dashboard": "giao diện Dashboard"}
+DECK_THEMES = ("dynamic", "dashboard")       # giao diện có đèn LED, đồng hồ số, bảng số LED, thanh năng lượng chạy
+
+
+def removed_themes(cfg):
+    r = set(cfg.get("removed_themes") or [])
+    if cfg.get("dyn_removed"):
+        r.add("dynamic")
+    r.discard("classic")
+    return r
 
 
 def apply_theme(name):
@@ -1836,7 +1869,8 @@ class App(tk.Tk):
         except Exception:
             _disk = {}
         _disk = _disk if isinstance(_disk, dict) else {}
-        self.layout = apply_theme("classic" if _disk.get("dyn_removed") else _disk.get("ui_theme", "classic"))
+        _want = _disk.get("ui_theme", "classic")
+        self.layout = apply_theme("classic" if _want in removed_themes(_disk) else _want)
         self.title(APP_NAME)
         self.geometry(f"{min(1480, max(1100, self.winfo_screenwidth() - 60))}x800")
         self._normal_geom = None
@@ -2986,7 +3020,7 @@ class App(tk.Tk):
         cards = ttk.Frame(self.tab_scan, style="Card.TFrame")
         cards.pack(fill="x")
         self.stat_vars = {}
-        for i, (key, title, color, glyph) in enumerate((("folders", "Thư mục sẽ quét", "#14b8a6", "▦"),
+        for i, (key, title, color, glyph) in enumerate((("folders", "Thư mục sẽ quét", C_STAT1, "▦"),
                                                  ("new", "File mới chưa có", C_BLUE, "●"),
                                                  ("dl", "Đang tải", C_ORANGE, "⬇"),
                                                  ("owned", "Danh sách đã có", C_GREEN, "✔"))):
@@ -2995,7 +3029,7 @@ class App(tk.Tk):
             cards.columnconfigure(i, weight=1)
             self.stat_vars[key] = var
 
-        if self.layout == "dynamic":
+        if self.layout in DECK_THEMES:
             self._build_dyn_deck(self.tab_scan)
         self._build_energy(self.tab_scan)
         bar = ttk.Frame(self.tab_scan, style="Card.TFrame")
@@ -4213,13 +4247,13 @@ class App(tk.Tk):
         self.top_upd.bind("<Button-1>", lambda e: self.check_update(silent=False))
         self.top_auto.bind("<Button-1>", lambda e: (self.select_page("settings"), self._settings_page("gen")))
         self.header_auto_text = ""
-        if not self.cfg.get("dyn_removed"):
+        if len(removed_themes(self.cfg)) < len(THEMES) - 1:
             self.top_theme = tk.Label(inner, text="◐  Giao diện", bg=C_CARD, fg=C_MUTED, font=(FONT, 10, "bold"),
                                       padx=12, pady=6, cursor="hand2", highlightbackground=C_BORDER,
                                       highlightthickness=1)
             self.top_theme.pack(side="right", padx=(0, 10))
             self.top_theme.bind("<Button-1>", lambda e: self._theme_menu(self.top_theme))
-        if self.layout == "dynamic":
+        if self.layout in DECK_THEMES:
             self._build_dyn_header(parent)
 
     # ================================================================ GIAO DIỆN ĐỘNG
@@ -4260,8 +4294,9 @@ class App(tk.Tk):
         inner = tk.Frame(deck, bg=C_PANEL, padx=16, pady=10)
         inner.pack(fill="x")
         self.dyn_big = {}
-        for i, (key, title, color) in enumerate((("pct", "ĐANG TẢI  %", C_ACCENT), ("speed", "TỐC ĐỘ  MB/s", C_GREEN),
-                                                ("today", "XONG HÔM NAY", C_ORANGE), ("owned", "ĐÃ CÓ", C_BLUE))):
+        cols = DECK_COLORS or (C_ACCENT, C_GREEN, C_ORANGE, C_BLUE)
+        for i, (key, title, color) in enumerate((("pct", "ĐANG TẢI  %", cols[0]), ("speed", "TỐC ĐỘ  MB/s", cols[1]),
+                                                ("today", "XONG HÔM NAY", cols[2]), ("owned", "ĐÃ CÓ", cols[3]))):
             box = tk.Frame(inner, bg=C_PANEL)
             box.grid(row=0, column=i, sticky="w", padx=(0, 30))
             inner.columnconfigure(i, weight=1)
@@ -4323,11 +4358,16 @@ class App(tk.Tk):
     def _theme_menu(self, widget):
         m = tk.Menu(self, tearoff=0)
         var = tk.StringVar(value=self.layout)
-        for key in ("classic", "dynamic"):
-            m.add_radiobutton(label=THEME_NAMES[key], variable=var, value=key,
-                              command=lambda k=key: self.switch_theme(k))
-        m.add_separator()
-        m.add_command(label="🗑  Xóa giao diện động...", command=self.remove_dynamic)
+        rem = removed_themes(self.cfg)
+        for key in THEMES:
+            if key not in rem:
+                m.add_radiobutton(label=THEME_NAMES[key], variable=var, value=key,
+                                  command=lambda k=key: self.switch_theme(k))
+        extra = [k for k in THEMES if k != "classic" and k not in rem]
+        if extra:
+            m.add_separator()
+            for k in extra:
+                m.add_command(label=f"🗑  Xóa {THEME_SHORT[k]}...", command=lambda k=k: self.remove_theme(k))
         try:
             m.tk_popup(widget.winfo_rootx(), widget.winfo_rooty() + widget.winfo_height() + 2)
         finally:
@@ -4353,34 +4393,46 @@ class App(tk.Tk):
         if not self._restart_ui(f"Chuyển sang: {THEME_NAMES[name]}"):
             self.cfg["ui_theme"] = old
 
-    def remove_dynamic(self):
-        """Xóa giao diện động: về giao diện gốc, ẩn nút ◐ Giao diện (khôi phục được ở Cài đặt > Chung)."""
-        old = (self.cfg.get("ui_theme"), self.cfg.get("dyn_removed"))
-        self.cfg["ui_theme"], self.cfg["dyn_removed"] = "classic", True
-        if self.layout == "classic":
-            if messagebox.askyesno(APP_NAME, "Xóa giao diện động? Nút ◐ Giao diện sẽ được ẩn đi.\n"
-                                             "(Khôi phục lại được ở Cài đặt → Chung → Giao diện.)"):
-                self.save_config()
-                try:
-                    self.top_theme.pack_forget()
-                except (AttributeError, tk.TclError):
-                    pass
-                self.log("🗑 Đã xóa giao diện động.")
-                self._settings_refresh_theme()
-            else:
-                self.cfg["ui_theme"], self.cfg["dyn_removed"] = old
-            return
-        if not self._restart_ui("Xóa giao diện động và quay về giao diện gốc?\n"
-                                "(Khôi phục lại được ở Cài đặt → Chung → Giao diện.)"):
-            self.cfg["ui_theme"], self.cfg["dyn_removed"] = old
+    def _set_removed(self, rem):
+        self.cfg["removed_themes"] = sorted(rem)
+        self.cfg["dyn_removed"] = "dynamic" in rem
 
-    def restore_dynamic(self):
-        self.cfg["dyn_removed"] = False
-        self.cfg["ui_theme"] = "dynamic"
-        if not self._restart_ui("Khôi phục và chuyển sang giao diện động?"):
-            self.cfg["ui_theme"] = "classic"
+    def remove_theme(self, name):
+        """Xóa 1 giao diện thêm (động / Dashboard). Giao diện gốc không xóa được. Khôi phục ở Cài đặt > Chung."""
+        if name == "classic" or name not in THEMES:
+            return
+        old = (self.cfg.get("ui_theme"), list(self.cfg.get("removed_themes") or []), self.cfg.get("dyn_removed"))
+        rem = removed_themes(self.cfg) | {name}
+        if self.layout != name:                    # xóa giao diện không đang dùng -> không cần khởi động lại
+            if messagebox.askyesno(APP_NAME, f"Xóa {THEME_SHORT[name]}?\n(Khôi phục lại được ở Cài đặt → Chung → "
+                                             "Giao diện.)"):
+                self._set_removed(rem)
+                self.save_config()
+                if len(rem) >= len(THEMES) - 1:
+                    try:
+                        self.top_theme.pack_forget()
+                    except (AttributeError, tk.TclError):
+                        pass
+                self.log(f"🗑 Đã xóa {THEME_SHORT[name]}.")
+                self._settings_refresh_theme()
+            return
+        self._set_removed(rem)
+        self.cfg["ui_theme"] = "classic"
+        if not self._restart_ui(f"Xóa {THEME_SHORT[name]} và quay về giao diện gốc?\n"
+                                "(Khôi phục lại được ở Cài đặt → Chung → Giao diện.)"):
+            self.cfg["ui_theme"], self.cfg["removed_themes"], self.cfg["dyn_removed"] = old
+
+    def restore_theme(self, name):
+        rem = removed_themes(self.cfg) - {name}
+        self._set_removed(rem)
+        self.save_config()
+        self.log(f"↺ Đã khôi phục {THEME_SHORT[name]}.")
+        old = self.cfg.get("ui_theme")
+        self.cfg["ui_theme"] = name
+        if not self._restart_ui(f"Đã khôi phục {THEME_SHORT[name]}. Chuyển sang giao diện này luôn?"):
+            self.cfg["ui_theme"] = old
             self.save_config()
-            self.log("◐ Đã khôi phục giao diện động - chọn bằng nút ◐ Giao diện sau khi mở lại tool.")
+            self._settings_refresh_theme()
 
     def _settings_refresh_theme(self):
         try:
@@ -4391,17 +4443,27 @@ class App(tk.Tk):
             pass
 
     def _fill_theme_box(self, fr):
-        if self.cfg.get("dyn_removed"):
-            ttk.Label(fr, text="Đang dùng giao diện gốc. Giao diện động đã bị xóa.", style="Muted.TLabel").pack(
-                side="left")
-            ttk.Button(fr, text="↺  Khôi phục giao diện động", command=self.restore_dynamic).pack(side="left", padx=10)
-            return
-        ttk.Label(fr, text="Đang dùng: " + THEME_NAMES[self.layout], style="Muted.TLabel").pack(side="left")
-        other = "dynamic" if self.layout == "classic" else "classic"
-        ttk.Button(fr, text="◐  Chuyển sang " + ("giao diện động" if other == "dynamic" else "giao diện gốc"),
-                   style="Accent.TButton", command=lambda: self.switch_theme(other)).pack(side="left", padx=10)
-        ttk.Button(fr, text="🗑  Xóa giao diện động", style="Danger.TButton", command=self.remove_dynamic).pack(
-            side="left")
+        rem = removed_themes(self.cfg)
+        ttk.Label(fr, text="Đang dùng: " + THEME_NAMES[self.layout], style="Muted.TLabel").grid(
+            row=0, column=0, columnspan=4, sticky="w", pady=(0, 6))
+        for r, key in enumerate(THEMES, 1):
+            ttk.Label(fr, text=THEME_NAMES[key]).grid(row=r, column=0, sticky="w", pady=3, padx=(0, 14))
+            if key in rem:
+                ttk.Label(fr, text="đã xóa", style="Muted.TLabel").grid(row=r, column=1, sticky="w")
+                ttk.Button(fr, text="↺  Khôi phục", style="Small.TButton",
+                           command=lambda k=key: self.restore_theme(k)).grid(row=r, column=2, sticky="w", padx=6)
+                continue
+            if key == self.layout:
+                ttk.Label(fr, text="✔ đang dùng", style="Muted.TLabel").grid(row=r, column=1, sticky="w")
+            else:
+                ttk.Button(fr, text="◐  Dùng giao diện này", style="Small.TButton",
+                           command=lambda k=key: self.switch_theme(k)).grid(row=r, column=1, sticky="w")
+            if key == "classic":
+                ttk.Label(fr, text="(gốc - không xóa được)", style="Muted.TLabel").grid(row=r, column=2, sticky="w",
+                                                                                     padx=6)
+            else:
+                ttk.Button(fr, text="🗑  Xóa", style="DangerSmall.TButton",
+                           command=lambda k=key: self.remove_theme(k)).grid(row=r, column=2, sticky="w", padx=6)
 
     def select_page(self, key):
         self.page = key
@@ -5012,9 +5074,9 @@ class App(tk.Tk):
 
         # ----- 1. Chung
         g = G(self._set_pages["gen"])
-        g.section("Giao diện", "Giao diện gốc (v1.3) luôn có, không xóa được. Giao diện động (nền tối, đèn LED, đồng "
-                               "hồ số, thanh năng lượng chạy) chọn bằng nút ◐ Giao diện hoặc ở đây; đổi xong tool tự "
-                               "khởi động lại.")
+        g.section("Giao diện", "Giao diện gốc (v1.3) luôn có, không xóa được. Giao diện động (nền tối) và Dashboard "
+                               "(trắng · cam · đỏ) có đèn LED, đồng hồ số, bảng số %, thanh năng lượng chạy; chọn bằng nút "
+                               "◐ Giao diện hoặc ở đây, đổi xong tool tự khởi động lại.")
         self._theme_box = g.frame()
         self._fill_theme_box(self._theme_box)
         g.section("Tự động")
