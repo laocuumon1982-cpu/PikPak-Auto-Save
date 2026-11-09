@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v2.1 by Duy Anh
+PikPak Auto Save v2.2 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -42,7 +42,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v2.1 by Duy Anh"
+APP_VERSION = "v2.2 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -162,6 +162,7 @@ C_CTA, C_CTA_HOVER = "", ""   # nút hành động phụ (Tải mục đã chọ
 STAT_COLORS = ()              # màu 4 ô thống kê; trống = mặc định
 ROW_H_ADD = 0                 # tăng chiều cao dòng bảng
 PILL_STATUS = False           # cột Trạng thái hiện thành nhãn có viền màu
+LED_PANEL = False             # thanh bên: bảng ĐÈN TRẠNG THÁI + thông tin tài khoản PikPak (giao diện 4)
 SIDE_BOLD = False             # chữ thanh bên in đậm hết
 C_SIDE_BRAND = "#ffffff"      # tên tool ở thanh bên
 THEMES = {
@@ -191,10 +192,13 @@ THEMES = {
 THEMES["fresh2"] = dict(THEMES["fresh"], BAR_STYLE="smooth", PILL_STATUS=True,
                         ENERGY_SETS={"dl": ("#fca5a5", "#ef4444", "#dc2626"), "up": ("#93c5fd", "#2563eb"),
                                      "all": ("#86efac", "#16a34a")})
+# ----- Giao diện 4: như giao diện 3 + thanh bên có thẻ cảnh báo, bảng đèn LED trạng thái, thông tin tài khoản PikPak
+THEMES["fresh3"] = dict(THEMES["fresh2"], LED_PANEL=True)
 THEME_NAMES = {"classic": "Giao diện 1  (gốc v1.3)",
                "fresh": "Giao diện 2  (thanh bên xanh da trời nhạt)",
-               "fresh2": "Giao diện 3  (như 2 · thanh tải dải liền · nhãn trạng thái có viền)"}
-THEME_SHORT = {"classic": "giao diện 1", "fresh": "giao diện 2", "fresh2": "giao diện 3"}
+               "fresh2": "Giao diện 3  (như 2 · thanh tải dải liền · nhãn trạng thái có viền)",
+               "fresh3": "Giao diện 4  (như 3 · đèn trạng thái · thông tin tài khoản PikPak)"}
+THEME_SHORT = {"classic": "giao diện 1", "fresh": "giao diện 2", "fresh2": "giao diện 3", "fresh3": "giao diện 4"}
 
 
 def apply_theme(name):
@@ -2237,8 +2241,352 @@ class App(tk.Tk):
         grip.bind("<ButtonRelease-1>", self._side_drag_end)
         grip.bind("<Double-Button-1>", lambda e: self.toggle_sidebar())
         self.side_grip = grip
+        if LED_PANEL:
+            self._build_led_side(side, SF, W)
         if self.cfg.get("side_collapsed"):
             self.after(10, lambda: self.toggle_sidebar(True))
+
+    # ================================================================ GIAO DIỆN 4: bảng ĐÈN TRẠNG THÁI ở thanh bên
+    LED_COL = {"ok": ("#4ade80", "#15803d"), "run": ("#fbbf24", "#c2410c"),
+               "err": ("#f87171", "#b91c1c"), "off": ("#e2e8f0", "#64748b")}
+    LED_BG = {"ok": "#dcfce7", "run": "#ffedd5", "err": "#fee2e2", "off": "#eef2f6"}
+    LED_BD = {"ok": "#86efac", "run": "#fdba74", "err": "#fca5a5", "off": "#cbd5e1"}
+
+    def _draw_led(self, cv, state, dim=False):
+        """Đèn LED tròn bóng (gradient + đốm sáng)."""
+        try:
+            s = int(cv.cget("width"))
+            cv.delete("all")
+        except tk.TclError:
+            return
+        hi, lo = self.LED_COL.get(state, self.LED_COL["off"])
+        if dim:
+            hi = _mix(hi, lo, 0.65)
+        cv.create_oval(1, 1, s - 1, s - 1, fill=_mix(lo, "#000000", 0.25), outline="")
+        for i in range(5):
+            k = 1.5 + i * s * 0.07
+            cv.create_oval(k, k, s - k, s - k, fill=_mix(lo, hi, (i + 1) / 5), outline="")
+        cv.create_oval(s * 0.27, s * 0.14, s * 0.62, s * 0.40, fill=_mix(hi, "#ffffff", 0.75), outline="")
+
+    def _build_led_side(self, side, SF, W):
+        """Giao diện 4: thay thẻ THƯ VIỆN / TỰ ĐỘNG / KẾT NỐI bằng thẻ cảnh báo + bảng đèn trạng thái.
+        Các nhãn cũ (side_pk, side_bk, side_health, side_err...) vẫn còn (ẩn) để phần lõi dùng chung."""
+        self.side_lib.pack_forget()
+        self.side_bottom.pack_forget()
+        self.led_cards = {}
+        self._led_blink = False
+        self._pk_acc = {}
+        self._rc_ver = None
+        self._led_issues = []
+
+        # ----- thẻ cảnh báo (đèn to)
+        al = tk.Frame(side, bg=self.LED_BG["err"], highlightthickness=1, highlightbackground=self.LED_BD["err"],
+                      padx=12, pady=10, cursor="hand2")
+        al.pack(fill="x", padx=14, pady=(16, 0))
+        self.led_alert = al
+        self.led_alert_cv = tk.Canvas(al, width=30, height=30, bg=al["bg"], highlightthickness=0)
+        self.led_alert_cv.pack(side="left", padx=(0, 10))
+        tx = tk.Frame(al, bg=al["bg"])
+        tx.pack(side="left", fill="x", expand=True)
+        self.led_alert_t1 = tk.Label(tx, text="Đang kiểm tra...", bg=al["bg"], fg="#000000", font=SF(11, True),
+                                     anchor="w")
+        self.led_alert_t1.pack(fill="x")
+        self.led_alert_t2 = tk.Label(tx, text="", bg=al["bg"], fg="#334155", font=SF(8), anchor="w",
+                                     justify="left", wraplength=W)
+        self.led_alert_t2.pack(fill="x")
+        for w in (al, self.led_alert_cv, tx, self.led_alert_t1, self.led_alert_t2):
+            w.bind("<Button-1>", lambda e: self._led_show_issues())
+        self.side_lib = al
+
+        # ----- đáy: bảng đèn + tự quét
+        bottom = tk.Frame(side, bg=C_SIDE)
+        bottom.pack(side="bottom", fill="x", padx=14, pady=(0, 12))
+        self.side_bottom = bottom
+        panel = tk.Frame(bottom, bg=C_SIDE_CARD, padx=10, pady=8)
+        panel.pack(fill="x")
+        hd = tk.Frame(panel, bg=C_SIDE_CARD)
+        hd.pack(fill="x", pady=(0, 6))
+        tk.Label(hd, text="ĐÈN TRẠNG THÁI", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=SF(8, True)).pack(side="left")
+        for st, nm in (("off", "Tắt"), ("err", "Lỗi"), ("run", "Đang chạy"), ("ok", "Tốt")):
+            tk.Label(hd, text=nm, bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 8)).pack(side="right", padx=(0, 6))
+            cv = tk.Canvas(hd, width=11, height=11, bg=C_SIDE_CARD, highlightthickness=0)
+            cv.pack(side="right", padx=(0, 2))
+            self._draw_led(cv, st)
+        grid = tk.Frame(panel, bg=C_SIDE_CARD)
+        grid.pack(fill="x")
+        grid.columnconfigure(0, weight=1, uniform="led")
+        grid.columnconfigure(1, weight=1, uniform="led")
+        layout = (("dl", "Đang tải", 0, 0, 2, None),
+                  ("pk", "PikPak", 1, 0, 2, lambda: self.get_rclone() if not find_rclone() else (
+                      self.select_page("settings"), self._settings_page("pikpak"))),
+                  ("hdd", "Ổ HDD (Đích 2)", 2, 0, 1, lambda: self.select_page("folders")),
+                  ("rc", "rclone", 2, 1, 1, lambda: self.get_rclone() if not find_rclone() else None),
+                  ("auto", "Tự quét", 3, 0, 1, None),
+                  ("bk", "Sao lưu", 3, 1, 1, lambda: self.select_page("settings")),
+                  ("err", "Lỗi", 4, 0, 2, self.copy_last_report))
+        for key, title, r, c, span, cmd in layout:
+            f = tk.Frame(grid, bg=self.LED_BG["off"], highlightthickness=1, highlightbackground=self.LED_BD["off"],
+                         padx=8, pady=5, cursor="hand2" if cmd else "")
+            f.grid(row=r, column=c, columnspan=span, sticky="nsew", padx=2, pady=2)
+            cv = tk.Canvas(f, width=18, height=18, bg=f["bg"], highlightthickness=0)
+            cv.pack(side="left", anchor="n", padx=(0, 7), pady=(2, 0))
+            tx = tk.Frame(f, bg=f["bg"])
+            tx.pack(side="left", fill="x", expand=True, anchor="n")
+            t1 = tk.Label(tx, text=title, bg=f["bg"], fg="#000000", font=SF(9, True), anchor="w")
+            t1.pack(fill="x")
+            t2 = tk.Label(tx, text="...", bg=f["bg"], fg="#1e293b", font=(FONT, 9 + SIDE_FONT_ADD // 2),
+                          anchor="w", justify="left")
+            t2.pack(fill="x")
+            self.led_cards[key] = {"f": f, "cv": cv, "tx": tx, "t1": t1, "t2": t2, "span": span, "state": None}
+            self._draw_led(cv, "off")
+            if cmd:
+                for w in (f, cv, tx, t1, t2):
+                    w.bind("<Button-1>", lambda e, fn=cmd: fn())
+
+        ar = tk.Frame(bottom, bg=C_SIDE)
+        ar.pack(fill="x", pady=(8, 0))
+        tk.Checkbutton(ar, text="Tự quét mỗi", variable=self.auto_var, command=self._auto_changed,
+                       bg=C_SIDE, fg=C_SIDE_TEXT, selectcolor="#ffffff", activebackground=C_SIDE,
+                       activeforeground=C_TEXT, font=SF(10), bd=0, highlightthickness=0).pack(side="left")
+        cb = ttk.Combobox(ar, textvariable=self.interval_var, values=INTERVAL_CHOICES, width=4, state="readonly")
+        cb.pack(side="left", padx=6)
+        cb.bind("<<ComboboxSelected>>", lambda e: self._auto_changed())
+        tk.Label(ar, text="phút", bg=C_SIDE, fg=C_SIDE_TEXT, font=SF(10)).pack(side="left")
+        self.side_auto = tk.Label(ar, text="", bg=C_SIDE, fg=C_SIDE_MUTED, font=SF(9), anchor="e")
+        self.side_auto.pack(side="right")
+
+        # chấm đỏ ở mục Cài đặt khi có vấn đề
+        row = self.nav["settings"]["row"]
+        self.led_nav_dot = tk.Canvas(row, width=13, height=13, bg=row["bg"], highlightthickness=0, cursor="hand2")
+        self._draw_led(self.led_nav_dot, "err")
+        self.led_nav_dot.bind("<Button-1>", lambda e: self.select_page("settings"))
+        self.after(600, self._led_tick)
+        self.after(4000, self._led_slow)
+
+    def _led_set(self, key, state, text):
+        c = self.led_cards.get(key)
+        if not c:
+            return
+        wrap = max(120, (self.side_w - 60) // (1 if c["span"] == 2 else 2) - 40)
+        if c["state"] != state:
+            c["state"] = state
+            bg = self.LED_BG[state]
+            c["f"].config(bg=bg, highlightbackground=self.LED_BD[state])
+            for w in (c["cv"], c["tx"], c["t1"], c["t2"]):
+                w.config(bg=bg)
+        if c["t2"].cget("text") != text or c["t2"].cget("wraplength") != wrap:
+            c["t2"].config(text=text, wraplength=wrap)
+        self._draw_led(c["cv"], state, dim=(state == "run" and self._led_blink))
+
+    def _led_slow(self):
+        """Việc chậm chạy nền (30s/lần): phiên bản rclone, ổ HDD đích, thông tin tài khoản PikPak."""
+        self.after(30000, self._led_slow)
+        cfg = json.loads(json.dumps(self.cfg))
+        pk_ok = getattr(self, "pk_ok", None)
+
+        def job():
+            r = find_rclone()
+            if r and not self._rc_ver:
+                c, o, _e = run_rclone(r, ["version"], 30)
+                m = re.search(r"v\d+\.\d+(?:\.\d+)?", o or "") if c == 0 else None
+                self._rc_ver = m.group(0) if m else "?"
+            elif not r:
+                self._rc_ver = None
+            drives = {}
+            for f in cfg.get("folders", []):
+                if not f.get("enabled", True) or not f.get("local_dir"):
+                    continue
+                d = os.path.abspath(from_portable(f["local_dir"]))
+                drv = os.path.splitdrive(d)[0] or d
+                if drv in drives:
+                    continue
+                if not os.path.exists((drv + os.sep) if os.path.splitdrive(d)[0] else d):
+                    drives[drv] = None
+                    continue
+                try:
+                    drives[drv] = shutil.disk_usage(d if os.path.isdir(d) else drv + os.sep).free
+                except OSError:
+                    drives[drv] = None
+            self._led_drives = drives
+            acc = dict(self._pk_acc)
+            if pk_ok and time.time() - acc.get("ts", 0) > 1800:
+                acc = {"ts": time.time()}
+                if cfg.get("pikpak_user") and cfg.get("pikpak_pass"):
+                    try:
+                        api = pikpak_api(cfg)
+                        try:
+                            v = (api.call("GET", "/drive/v1/privilege/vip") or {}).get("data") or {}
+                            ty = str(v.get("type") or "").lower()
+                            if ty:
+                                acc["vip"] = ty != "novip" and str(v.get("status") or "ok").lower() in (
+                                    "ok", "valid", "active", "normal")
+                                acc["vip_type"] = "" if ty in ("novip", "vip") else ty.capitalize()
+                            acc["expire"] = str(v.get("expire") or "")[:10]
+                        except Exception:
+                            pass
+                        try:
+                            q = (api.call("GET", "/drive/v1/about") or {}).get("quota") or {}
+                            acc["total"], acc["used"] = int(q.get("limit") or 0), int(q.get("usage") or 0)
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+                if not acc.get("total") and r:
+                    c3, o3, _e = run_rclone(r, ["about", f"{cfg.get('pikpak_remote', 'pikpak') or 'pikpak'}:",
+                                                "--json"], 60)
+                    try:
+                        j = json.loads(o3)
+                        acc["total"], acc["used"] = int(j.get("total") or 0), int(j.get("used") or 0)
+                    except (ValueError, TypeError):
+                        pass
+            elif not pk_ok:
+                acc = {}
+            self._pk_acc = acc
+        threading.Thread(target=job, daemon=True).start()
+
+    def _led_tick(self):
+        if not getattr(self, "led_cards", None):
+            return
+        self.after(700, self._led_tick)
+        self._led_blink = not self._led_blink
+        issues = []
+        try:
+            # Đang tải
+            busy = bool(self.worker and self.worker.is_alive())
+            if busy:
+                info = ""
+                try:
+                    info = self.energy["dl"][1].get()
+                except (AttributeError, KeyError, tk.TclError):
+                    pass
+                done, n = getattr(self, "_batch", (0, 0))
+                txt = (f"{done}/{n} · " if n else "") + f"{getattr(self, '_dl_pct', 0)}%"
+                self._led_set("dl", "run", txt + (f"  ·  {info}" if info and info != "—" else ""))
+            else:
+                self._led_set("dl", "off", "Rảnh")
+            # PikPak + tài khoản
+            ok = getattr(self, "pk_ok", None)
+            user = self.cfg.get("pikpak_user") or ""
+            lines = []
+            if ok is True:
+                st = "ok"
+                lines.append("✔ Đã kết nối")
+            elif ok is False:
+                st = "err"
+                t = self.side_pk.cget("text").replace("☁ PikPak:", "").strip()
+                lines.append("✘ " + (t if len(t) < 70 else t[:67] + "...") if t else "✘ Chưa kết nối")
+                issues.append("PikPak: chưa kết nối được (bấm thẻ PikPak để thiết lập)")
+            else:
+                st = "run"
+                t = self.side_pk.cget("text").replace("☁ PikPak:", "").strip()
+                lines.append(t or "đang kết nối...")
+                if "chưa đăng nhập" in t:
+                    st = "err"
+                    issues.append("PikPak: chưa đăng nhập tài khoản")
+            if user:
+                lines.append("👤 " + user)
+            acc = self._pk_acc
+            if ok and acc:
+                v = []
+                if "vip" in acc:
+                    v.append(("★ VIP" + (f" {acc['vip_type']}" if acc.get("vip_type") else "")
+                              + (f" · hết hạn {acc['expire']}" if acc.get("expire") else "")) if acc["vip"]
+                             else "☆ Tài khoản thường (không VIP)")
+                if acc.get("total"):
+                    pct = acc["used"] * 100 // acc["total"]
+                    v.append(f"☁ {human_size(acc['used'])} / {human_size(acc['total'])} ({pct}%)")
+                elif acc.get("used"):
+                    v.append(f"☁ Đã dùng {human_size(acc['used'])}")
+                if v:
+                    lines.append("   ".join(v))
+            elif ok:
+                lines.append("đang đọc thông tin tài khoản...")
+            self._led_set("pk", st, "\n".join(lines))
+            # Ổ HDD đích
+            drives = getattr(self, "_led_drives", None)
+            if drives is None:
+                self._led_set("hdd", "run", "đang kiểm tra...")
+            elif not drives:
+                self._led_set("hdd", "off", "Chưa chọn thư mục HDD")
+            else:
+                bad = [d for d, fr in drives.items() if fr is None]
+                low = [d for d, fr in drives.items() if fr is not None and fr < 5 * 1024 ** 3]
+                txt = "  ".join(f"{d} {'✘ chưa cắm' if fr is None else 'trống ' + human_size(fr)}"
+                                for d, fr in drives.items())
+                if bad:
+                    issues.append("Ổ HDD chưa cắm: " + ", ".join(bad))
+                if low:
+                    issues.append("Ổ HDD sắp đầy: " + ", ".join(low))
+                self._led_set("hdd", "err" if bad else ("run" if low else "ok"), txt)
+            # rclone
+            if not find_rclone():
+                self._led_set("rc", "err", "Chưa có · bấm để tải")
+                issues.append("Chưa có rclone.exe (bấm thẻ rclone để tải)")
+            else:
+                self._led_set("rc", "ok", f"{self._rc_ver} sẵn sàng" if self._rc_ver else "sẵn sàng")
+            # Tự quét
+            if self.cfg.get("auto_scan") and self.next_auto_ts:
+                self._led_set("auto", "ok", f"Bật · lần tới {dt.datetime.fromtimestamp(self.next_auto_ts):%H:%M}")
+            else:
+                self._led_set("auto", "off", "Đang tắt")
+            self.side_auto.config(text="Bật" if self.cfg.get("auto_scan") else "Tắt",
+                                  fg=C_GREEN if self.cfg.get("auto_scan") else C_SIDE_MUTED)
+            # Sao lưu
+            bk = self.cfg.get("last_backup") or ""
+            if not self.cfg.get("backup_on", True):
+                self._led_set("bk", "off", "Đã tắt")
+            elif "lỗi" in self.side_bk.cget("text"):
+                self._led_set("bk", "err", "Sao lưu lỗi")
+                issues.append("Sao lưu lên PikPak bị lỗi")
+            elif not bk:
+                self._led_set("bk", "run", "Chưa sao lưu lần nào")
+            else:
+                try:
+                    h = int((dt.datetime.now() - dt.datetime.strptime(bk, "%H:%M %d/%m/%Y")).total_seconds() // 3600)
+                except ValueError:
+                    h = 0
+                if h >= 24:
+                    self._led_set("bk", "run", f"Chưa đồng bộ ({h} giờ)")
+                else:
+                    self._led_set("bk", "ok", f"Lúc {bk[:11]}" if h < 1 else f"{h} giờ trước")
+            # Lỗi
+            d = DATA_DIR / "BaoLoi"
+            n = len(list(d.glob("BaoLoi_*.txt"))) if d.is_dir() else 0
+            if n:
+                self._led_set("err", "err", f"{n} lỗi · bấm để copy báo cáo (dán vào Claude)")
+                issues.append(f"{n} báo cáo lỗi")
+            else:
+                self._led_set("err", "ok", "Không có lỗi")
+            for p_ in getattr(self, "_health_probs", []) or []:
+                if not any(k in p_ for k in ("rclone", "PikPak", "Không thấy ổ", "chỉ còn trống")):
+                    issues.append(p_)
+        except (tk.TclError, AttributeError):
+            return
+        self._led_issues = issues
+        n = len(issues)
+        st = "err" if n else "ok"
+        bg = self.LED_BG[st]
+        if self.led_alert.cget("bg") != bg:
+            self.led_alert.config(bg=bg, highlightbackground=self.LED_BD[st])
+            for w in (self.led_alert_cv, self.led_alert_t1.master, self.led_alert_t1, self.led_alert_t2):
+                w.config(bg=bg)
+        self.led_alert_t1.config(text=f"Có {n} mục cần xử lý" if n else "Mọi thứ đều ổn")
+        self.led_alert_t2.config(text="Tool chưa tự tải được cho tới khi sửa · bấm để xem" if n
+                                 else "Sẵn sàng tự quét & tải", wraplength=self.side_w - 110)
+        self._draw_led(self.led_alert_cv, st, dim=(n and self._led_blink))
+        if n and not getattr(self, "side_collapsed", False):
+            if not self.led_nav_dot.winfo_ismapped():
+                self.led_nav_dot.pack(side="right", padx=(0, 12))
+            self.led_nav_dot.config(bg=self.nav["settings"]["row"].cget("bg"))
+        elif self.led_nav_dot.winfo_ismapped():
+            self.led_nav_dot.pack_forget()
+
+    def _led_show_issues(self):
+        iss = getattr(self, "_led_issues", [])
+        if iss:
+            messagebox.showwarning(APP_NAME, "Các mục cần xử lý:\n\n• " + "\n• ".join(iss))
+        else:
+            messagebox.showinfo(APP_NAME, "Mọi thứ đều ổn - tool sẵn sàng tự quét & tải.")
 
     def _side_drag(self, e):
         if LAYOUT != "classic":
@@ -3345,6 +3693,7 @@ class App(tk.Tk):
             return True
 
     def _show_health(self, probs):
+        self._health_probs = list(probs)
         try:
             if probs:
                 self.side_health.config(text="⚠ " + "\n⚠ ".join(probs))

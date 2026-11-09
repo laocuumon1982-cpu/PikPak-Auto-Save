@@ -1,6 +1,15 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v2.2  (09/11/2026)
+  - Thêm Giao diện 4: như giao diện 3, thanh bên có
+    · thẻ cảnh báo đèn to: "Có N mục cần xử lý" (bấm để xem danh sách) / "Mọi thứ đều ổn";
+    · bảng ĐÈN TRẠNG THÁI (xanh = tốt, cam = đang chạy, đỏ = lỗi, xám = tắt): Đang tải, PikPak, Ổ HDD (Đích 2),
+      rclone, Tự quét, Sao lưu, Lỗi;
+    · thẻ PikPak có thông tin tài khoản: email, VIP (loại, ngày hết hạn), dung lượng đã dùng / tổng;
+    · chấm đỏ ở mục Cài đặt khi có vấn đề; dòng "Tự quét mỗi N phút" ở đáy.
+  - Tool này không dùng RaiDrive nên thẻ RaiDrive trong mẫu được thay bằng thẻ Ổ HDD (ổ đã cắm, chỗ trống).
+
 v2.1  (08/11/2026)
   - Chỉ giữ 3 giao diện, đặt tên theo thứ tự:
     · Giao diện 1: gốc v1.3 (không xóa được);
