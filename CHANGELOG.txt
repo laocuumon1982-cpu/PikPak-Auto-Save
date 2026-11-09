@@ -1,6 +1,14 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v2.3  (09/11/2026)
+  - Bỏ giao diện 4 bản v2.2, làm lại Giao diện 4 theo đúng mẫu:
+    · thẻ cảnh báo nền trắng ngay dưới menu (đèn đỏ "Có N mục cần xử lý" / đèn xanh "Mọi thứ đều ổn");
+    · bảng ĐÈN TRẠNG THÁI ở đáy: chú thích Tốt / Đang chạy / Lỗi / Tắt, thẻ nền trắng (thẻ lỗi nền hồng, chữ đỏ):
+      Đang tải · PikPak | RaiDrive · rclone | Tự quét · Sao lưu | Lỗi, ô "Tự quét mỗi N phút  Bật/Tắt";
+    · thẻ PikPak: trạng thái + email + VIP (hạn dùng) + dung lượng; thẻ RaiDrive hiện "Không dùng" khi chưa đặt ổ;
+    · bấm thẻ Lỗi: copy và mở báo cáo lỗi mới nhất.
+
 v2.2  (09/11/2026)
   - Thêm Giao diện 4: như giao diện 3, thanh bên có
     · thẻ cảnh báo đèn to: "Có N mục cần xử lý" (bấm để xem danh sách) / "Mọi thứ đều ổn";
