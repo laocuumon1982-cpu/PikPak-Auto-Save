@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v2.3 by Duy Anh
+PikPak Auto Save v2.4 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -11,6 +11,7 @@ Chạy:  python auto_download_pikpak_share.py          (mở giao diện)
 import datetime as dt
 import hashlib
 import json
+import math
 import os
 import queue
 import re
@@ -42,7 +43,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v2.3 by Duy Anh"
+APP_VERSION = "v2.4 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -163,6 +164,14 @@ STAT_COLORS = ()              # màu 4 ô thống kê; trống = mặc định
 ROW_H_ADD = 0                 # tăng chiều cao dòng bảng
 PILL_STATUS = False           # cột Trạng thái hiện thành nhãn có viền màu
 LED_PANEL = False             # thanh bên: bảng ĐÈN TRẠNG THÁI + thông tin tài khoản PikPak (giao diện 4)
+LED_LIST = False              # bảng đèn dạng danh sách thẻ nổi (giao diện 5, 6, 7)
+BTN_3D = False                # nút nổi 3D
+BAR_STRIPES = False           # thanh tải có sọc chéo
+ANIM = False                  # hiệu ứng động: đèn nhịp thở, sọc chạy (giao diện 7)
+STAT_ICONS = False            # ô thống kê có biểu tượng vuông màu
+C_LED_PANEL, C_LED_CARD, C_LED_BD, C_LED_SHADOW = "#d3e7fa", "#ffffff", "#d5dee8", "#b4c8dc"
+C_LED_TITLE, C_LED_OFF_TXT, C_LED_ERR_BG, C_LED_ERR_BD = "#000000", "#334155", "#fdeaea", "#f3b4b4"
+LED_TXT_COLORS = {"ok": "#16a34a", "run": "#ea580c", "err": "#dc2626", "off": "#475569"}
 SIDE_BOLD = False             # chữ thanh bên in đậm hết
 C_SIDE_BRAND = "#ffffff"      # tên tool ở thanh bên
 THEMES = {
@@ -194,11 +203,38 @@ THEMES["fresh2"] = dict(THEMES["fresh"], BAR_STYLE="smooth", PILL_STATUS=True,
                                      "all": ("#86efac", "#16a34a")})
 # ----- Giao diện 4: như giao diện 3 + thanh bên có thẻ cảnh báo, bảng đèn LED trạng thái, thông tin tài khoản PikPak
 THEMES["fresh3"] = dict(THEMES["fresh2"], LED_PANEL=True)
+# ----- Giao diện 5, 6, 7: nút nổi 3D, thanh tải sọc, ô thống kê có biểu tượng, bảng đèn dạng danh sách
+THEMES["pro"] = dict(THEMES["fresh2"], LED_PANEL=True, LED_LIST=True, BTN_3D=True, BAR_STRIPES=True, STAT_ICONS=True,
+                     C_SIDE="#e3f0fc", C_SIDE_CARD="#d3e7fa", C_SIDE_HOVER="#d0e5f8", C_BG="#eef1f5",
+                     C_SIDE_MUTED="#1e293b")
+THEMES["prodark"] = dict(THEMES["pro"], **{
+    "C_BG": "#10172a", "C_CARD": "#151d31", "C_PANEL": "#1a2338", "C_FIELD": "#0f172a",
+    "C_SOFT": "#2a1620", "C_SOFT_BORDER": "#5b2330", "C_SEL": "#3a1d29", "C_HEAD": "#1a2338", "C_ODD": "#172036",
+    "C_TEXT": "#e5e7eb", "C_MUTED": "#94a3b8", "C_BORDER": "#2a3552",
+    "C_GREEN": "#22c55e", "C_ORANGE": "#f97316", "C_RED": "#ef4444", "C_BLUE": "#3b82f6", "C_WARN_BG": "#2a2116",
+    "C_SIDE": "#131b2f", "C_SIDE_CARD": "#182136", "C_SIDE_HOVER": "#1f2a44", "C_SIDE_TEXT": "#f1f5f9",
+    "C_SIDE_MUTED": "#cbd5e1", "C_SIDE_SEL_TEXT": "#ffffff", "C_SIDE_BRAND": "#ffffff",
+    "C_BTN_HOVER": "#26304a", "C_DIS_TEXT": "#64748b",
+    "C_DANGER_BG": "#2a1a22", "C_DANGER_BORDER": "#5b2330", "C_DANGER_HOVER": "#3a2029", "C_DANGER_DIS": "#7f4b55",
+    "C_TROUGH": "#0b1120", "C_SCROLL_ACT": "#334155", "C_SKIP": "#64748b",
+    "C_SIDE_OK": "#4ade80", "C_SIDE_BAD": "#f87171", "C_ERR_BG": "#7f1d1d", "C_ERR_FG": "#ffffff",
+    "C_FOOT": "#94a3b8", "C_LOG_BG": "#0a120d", "C_LOG_FG": "#d9f99d", "C_CHECK_BORDER": "#475569",
+    "C_GLYPH": "#334155", "ENERGY_EMPTY": "#0b1120",
+    "C_LED_PANEL": "#182136", "C_LED_CARD": "#1d2740", "C_LED_BD": "#2c3856", "C_LED_SHADOW": "#0b1020",
+    "C_LED_TITLE": "#f8fafc", "C_LED_OFF_TXT": "#94a3b8", "C_LED_ERR_BG": "#3a1a22", "C_LED_ERR_BD": "#7f2a36",
+    "LED_TXT_COLORS": {"ok": "#4ade80", "run": "#fb923c", "err": "#f87171", "off": "#94a3b8"}})
+THEMES["proanim"] = dict(THEMES["pro"], ANIM=True, C_BLUE="#2f7fa3",
+                         ENERGY_SETS={"dl": ("#fca5a5", "#ef4444", "#dc2626"), "up": ("#7cc0dd", "#2f7fa3"),
+                                      "all": ("#86efac", "#16a34a")})
 THEME_NAMES = {"classic": "Giao diện 1  (gốc v1.3)",
                "fresh": "Giao diện 2  (thanh bên xanh da trời nhạt)",
                "fresh2": "Giao diện 3  (như 2 · thanh tải dải liền · nhãn trạng thái có viền)",
-               "fresh3": "Giao diện 4  (như 3 · bảng đèn trạng thái · tài khoản PikPak)"}
-THEME_SHORT = {"classic": "giao diện 1", "fresh": "giao diện 2", "fresh2": "giao diện 3", "fresh3": "giao diện 4"}
+               "fresh3": "Giao diện 4  (như 3 · bảng đèn trạng thái · tài khoản PikPak)",
+               "pro": "Giao diện 5  (sáng · nút nổi 3D · bảng đèn dạng danh sách)",
+               "prodark": "Giao diện 6  (tối · như 5)",
+               "proanim": "Giao diện 7  (như 5 · đèn nhịp thở, thanh tải sọc chạy)"}
+THEME_SHORT = {"classic": "giao diện 1", "fresh": "giao diện 2", "fresh2": "giao diện 3", "fresh3": "giao diện 4", "pro": "giao diện 5",
+               "prodark": "giao diện 6", "proanim": "giao diện 7"}
 
 
 def apply_theme(name):
@@ -206,6 +242,14 @@ def apply_theme(name):
     name = name if name in THEMES else "classic"
     globals().update(THEMES[name])
     return name
+
+
+def theme_label(cfg, key, short=False):
+    """Tên giao diện (người dùng đổi được ở Cài đặt > Chung > Giao diện)."""
+    custom = str((cfg.get("theme_names") or {}).get(key) or "").strip()
+    if custom:
+        return custom
+    return (THEME_SHORT if short else THEME_NAMES).get(key, key)
 
 
 def removed_themes(cfg):
@@ -1754,6 +1798,7 @@ class EnergyBar(tk.Canvas):
     def __init__(self, parent, bg, height=18, seg=36, empty=None, colors=None):
         super().__init__(parent, bg=bg, height=height, highlightthickness=0, bd=0)
         self.seg, self.empty, self.colors, self.pct = seg, empty or ENERGY_EMPTY, colors or ENERGY_COLORS, 0
+        self.off = 0                                 # độ lệch sọc (giao diện động)
         self.bind("<Configure>", lambda e: self._draw())
 
     def _color(self, t):
@@ -1787,13 +1832,23 @@ class EnergyBar(tk.Canvas):
             fw = (w - 1) * self.pct / 100
             if fw > 0:
                 fw = max(fw, th)
-                n = max(1, int((fw - th) // 3))
+                n = max(1, int((fw - th) // (6 if BAR_STRIPES else 3)))
                 for k in range(n):
                     xa = r + (fw - th) * k / n
                     xb = r + (fw - th) * (k + 1) / n
                     self.create_rectangle(xa, y0, xb + 1, y1, fill=self._color(k / max(1, n - 1)), outline="")
                 self.create_oval(0, y0, th, y1, fill=self._color(0), outline="")
                 self.create_oval(fw - th, y0, fw, y1, fill=self._color(1), outline="")
+                if BAR_STRIPES:                         # sọc chéo sáng + vệt bóng phía trên
+                    lo, hi = r * 0.6, fw - r * 0.6
+                    x = lo - 16 + self.off
+                    while x < hi:
+                        pts = [(x, y1), (x + 6, y1), (x + 6 + th, y0), (x + th, y0)]
+                        pts = [(min(max(px, lo), hi), py) for px, py in pts]
+                        col = _mix(self._color(min(1, max(0, (x - lo) / max(1, hi - lo)))), "#ffffff", 0.4)
+                        self.create_polygon(*[v for p in pts for v in p], fill=col, outline="")
+                        x += 16
+                    self.create_line(r, y0 + 2, max(r, fw - r), y0 + 2, fill=_mix(self._color(0.5), "#ffffff", 0.55))
             return
         gap = 3
         n = max(8, min(self.seg, int(w // 14)))      # cửa sổ hẹp -> ít ô hơn, ô không bị mảnh như mã vạch
@@ -1821,7 +1876,8 @@ class App(tk.Tk):
         _want = _disk.get("ui_theme", "classic")
         self.layout = apply_theme("classic" if _want in removed_themes(_disk) else _want)
         self.title(APP_NAME)
-        self.geometry(f"{min(1480, max(1100, self.winfo_screenwidth() - 60))}x800")
+        self.geometry(f"{min(1480, max(1100, self.winfo_screenwidth() - 60))}x"
+                      f"{max(800, min(900, self.winfo_screenheight() - 80)) if LED_LIST else 800}")
         self._normal_geom = None
         self._was_zoomed = False
         self.minsize(1040, 640)
@@ -2053,6 +2109,16 @@ class App(tk.Tk):
             st.configure(name, background=C_DANGER_BG, foreground=C_RED, bordercolor=C_DANGER_BORDER,
                          lightcolor=C_DANGER_BG, darkcolor=C_DANGER_BG, padding=pad, font=(FONT, fs))
             st.map(name, background=[("active", C_DANGER_HOVER)], foreground=[("disabled", C_DANGER_DIS)])
+        if BTN_3D:                                    # nút nổi: cạnh trên sáng, cạnh dưới tối
+            st.configure("TButton", lightcolor=_mix(C_PANEL, "#ffffff", 0.7), darkcolor=_mix(C_PANEL, "#000000", 0.2),
+                         bordercolor=_mix(C_BORDER, "#000000", 0.18), borderwidth=2)
+            for name in ("Accent.TButton", "AccentSmall.TButton", "Cta.TButton", "Success.TButton"):
+                st.configure(name, lightcolor=_mix(C_ACCENT, "#ffffff", 0.35), darkcolor=_mix(C_ACCENT, "#000000", 0.3),
+                             bordercolor=_mix(C_ACCENT, "#000000", 0.4), borderwidth=2)
+            for name in ("Danger.TButton", "DangerSmall.TButton"):
+                st.configure(name, lightcolor=_mix(C_DANGER_BG, "#ffffff", 0.7),
+                             darkcolor=_mix(C_DANGER_BORDER, "#000000", 0.1),
+                             bordercolor=_mix(C_DANGER_BORDER, "#000000", 0.2), borderwidth=2)
         for name, pad in (("TEntry", 6), ("TCombobox", 5), ("TSpinbox", 4)):
             st.configure(name, fieldbackground=C_FIELD, foreground=C_TEXT, bordercolor=C_BORDER,
                          lightcolor=C_FIELD, darkcolor=C_FIELD, padding=pad, arrowsize=12, insertcolor=C_ACCENT,
@@ -2263,7 +2329,7 @@ class App(tk.Tk):
             return
         hi, lo = self.LED_COL.get(state, self.LED_COL["off"])
         if dim:
-            hi = _mix(hi, lo, 0.7)
+            hi = _mix(hi, lo, 0.7 if dim is True else float(dim))
         cv.create_oval(0, 0, s - 1, s - 1, fill=_mix(lo, "#ffffff", 0.55), outline="")       # quầng
         cv.create_oval(1.5, 1.5, s - 2.5, s - 2.5, fill=_mix(lo, "#000000", 0.18), outline="")
         for i in range(6):
@@ -2281,6 +2347,8 @@ class App(tk.Tk):
         self._pk_acc = {}
         self._rc_ver = None
         self._led_issues = []
+        if LED_LIST:
+            return self._build_led_list(side, SF, W)
         WHITE = "#ffffff"
 
         # ----- thẻ cảnh báo (nền trắng, đèn to)
@@ -2378,21 +2446,184 @@ class App(tk.Tk):
         self.after(600, self._led_tick)
         self.after(3000, self._led_slow)
 
+    # ----- giao diện 5 / 6 / 7: bảng đèn dạng danh sách (thẻ nổi, mũi tên ›)
+    def _build_led_list(self, side, SF, W):
+        CARD = C_LED_CARD
+        self.LED_BG = {"ok": CARD, "run": CARD, "off": CARD, "err": C_LED_ERR_BG}
+        self.LED_BD = {"ok": C_LED_BD, "run": C_LED_BD, "off": C_LED_BD, "err": C_LED_ERR_BD}
+        self.LED_TXT = dict(LED_TXT_COLORS)
+        if ANIM:
+            self.LED_COL = dict(self.LED_COL, run=("#fca5a5", "#dc2626"))
+            self.LED_TXT["run"] = self.LED_TXT["err"]
+
+        def raised(parent_, **pack):
+            """Thẻ nổi: khung bóng đổ (đậm hơn ở cạnh dưới) bọc thẻ trắng."""
+            sh = tk.Frame(parent_, bg=C_LED_SHADOW)
+            sh.pack(fill="x", **pack)
+            inner = tk.Frame(sh, bg=CARD, highlightthickness=1, highlightbackground=C_LED_BD)
+            inner.pack(fill="x", padx=(0, 1), pady=(0, 2))
+            return sh, inner
+
+        # ----- thẻ "Mọi thứ hoạt động tốt"
+        _sh, al = raised(side, padx=14, pady=(14, 0))
+        self.led_alert = al
+        self.led_alert_cv = tk.Canvas(al, width=32, height=32, bg=CARD, highlightthickness=0)
+        self.led_alert_cv.pack(side="left", padx=(10, 6), pady=8)
+        tx = tk.Frame(al, bg=CARD)
+        tx.pack(side="left", fill="x", expand=True)
+        self.led_alert_t1 = tk.Label(tx, text="Đang kiểm tra...", bg=CARD, fg=C_LED_TITLE,
+                                     font=(FONT, 11 + SIDE_FONT_ADD // 2, "bold"), anchor="w")
+        self.led_alert_t1.pack(fill="x")
+        self.led_alert_t2 = tk.Label(tx, text="", bg=CARD, fg=C_LED_OFF_TXT, font=(FONT, 9), anchor="w",
+                                     justify="left", wraplength=W)
+        self.led_alert_t2.pack(fill="x")
+        for w in (al, self.led_alert_cv, tx, self.led_alert_t1, self.led_alert_t2):
+            w.bind("<Button-1>", lambda e: self._led_show_issues())
+        self.side_lib = _sh
+
+        # ----- đáy: BẢNG ĐÈN TRẠNG THÁI
+        bottom = tk.Frame(side, bg=C_LED_PANEL, padx=12, pady=10, highlightthickness=1,
+                          highlightbackground=_mix(C_LED_PANEL, C_LED_SHADOW, 0.6))
+        bottom.pack(side="bottom", fill="x", padx=14, pady=(0, 14))
+        self.side_bottom = bottom
+        tk.Label(bottom, text="BẢNG ĐÈN TRẠNG THÁI", bg=C_LED_PANEL, fg=C_LED_TITLE,
+                 font=(FONT, 9, "bold")).pack(anchor="w")
+        lg = tk.Frame(bottom, bg=C_LED_PANEL)
+        lg.pack(anchor="w", pady=(2, 6))
+        for st, nm in (("ok", "Tốt"), ("run", "Đang chạy"), ("err", "Lỗi"), ("off", "Tắt")):
+            dot = tk.Canvas(lg, width=9, height=9, bg=C_LED_PANEL, highlightthickness=0)
+            dot.create_oval(0, 0, 8, 8, fill=self.LED_DOT[st], outline="")
+            dot.pack(side="left")
+            tk.Label(lg, text=nm, bg=C_LED_PANEL, fg=C_LED_OFF_TXT, font=(FONT, 8)).pack(side="left", padx=(3, 12))
+
+        def open_err():
+            d = DATA_DIR / "BaoLoi"
+            files = sorted(d.glob("BaoLoi_*.txt")) if d.is_dir() else []
+            if not files:
+                messagebox.showinfo(APP_NAME, "Chưa có báo cáo lỗi nào.")
+                return
+            self.copy_last_report()
+            open_target(str(files[-1]))
+
+        def toggle_auto():
+            self.auto_var.set(not self.auto_var.get())
+            self._auto_changed()
+
+        layout = (("pk", "PikPak", lambda: self.get_rclone() if not find_rclone() else (
+                      self.select_page("settings"), self._settings_page("pikpak"))),
+                  ("rd", "RaiDrive", lambda: self.select_page("settings")),
+                  ("rc", "rclone", lambda: self.get_rclone() if not find_rclone() else (
+                      self.select_page("settings"), self._settings_page("pikpak"))),
+                  ("auto", "Tự quét", toggle_auto),
+                  ("dl", "Đang tải", lambda: self.select_page("scan")),
+                  ("bk", "Sao lưu", lambda: self.select_page("settings")),
+                  ("err", "Lỗi", open_err))
+        for key, title, cmd in layout:
+            sh, f = raised(bottom, pady=(0, 6))
+            f.config(cursor="hand2")
+            cv = tk.Canvas(f, width=22, height=22, bg=CARD, highlightthickness=0)
+            cv.pack(side="left", padx=(10, 8), pady=7)
+            tx = tk.Frame(f, bg=CARD)
+            tx.pack(side="left", fill="x", expand=True)
+            t1 = tk.Label(tx, text=title, bg=CARD, fg=C_LED_TITLE, font=(FONT, 10 + SIDE_FONT_ADD // 2, "bold"),
+                          anchor="w")
+            t1.pack(fill="x")
+            t2 = tk.Label(tx, text="...", bg=CARD, fg=self.LED_TXT["off"], font=(FONT, 9), anchor="w",
+                          justify="left")
+            t2.pack(fill="x")
+            extra = []
+            if key == "auto":
+                ar = tk.Frame(f, bg=CARD)
+                ar.pack(side="right", padx=(0, 10))
+                l1 = tk.Label(ar, text="mỗi", bg=CARD, fg=C_LED_TITLE, font=(FONT, 9, "bold"))
+                l1.pack(side="left")
+                cb = ttk.Combobox(ar, textvariable=self.interval_var, values=INTERVAL_CHOICES, width=3,
+                                  state="readonly")
+                cb.pack(side="left", padx=5)
+                cb.bind("<<ComboboxSelected>>", lambda e: self._auto_changed())
+                l2 = tk.Label(ar, text="phút", bg=CARD, fg=C_LED_TITLE, font=(FONT, 9, "bold"))
+                l2.pack(side="left")
+                extra = [ar, l1, l2]
+            else:
+                ch = tk.Label(f, text="›", bg=CARD, fg=C_LED_OFF_TXT, font=(FONT, 13, "bold"))
+                ch.pack(side="right", padx=(0, 12))
+                extra = [ch]
+            self.led_cards[key] = {"f": f, "cv": cv, "tx": tx, "t1": t1, "t2": t2, "span": 2, "state": None,
+                                   "extra": extra, "narrow": key == "auto"}
+            self._draw_led(cv, "off")
+            for w in (f, cv, tx, t1, t2) + ((extra[0],) if key != "auto" else ()):
+                w.bind("<Button-1>", lambda e, fn=cmd: fn())
+        # thẻ Tự quét không còn ô tích: bấm vào thẻ để bật / tắt
+        self.side_auto = tk.Label(side)        # (nhãn ẩn - phần lõi vẫn ghi vào)
+
+        # đèn trạng thái trên mục menu đang chọn
+        for k, n in self.nav.items():
+            n["dot"] = tk.Canvas(n["row"], width=18, height=18, bg=C_SIDE, highlightthickness=0)
+        self.led_nav_dot = None
+        self.after(600, self._led_tick)
+        self.after(3000, self._led_slow)
+        if ANIM:
+            self.after(200, self._led_anim)
+
+    def _led_nav_style(self, key):
+        """Mục menu đang chọn: thẻ trắng nổi, biểu tượng ô xanh lá, đèn trạng thái bên phải."""
+        for k, n in self.nav.items():
+            on = k == key
+            bg = C_LED_CARD if on else C_SIDE
+            n["row"].config(bg=bg, highlightthickness=1 if on else 0, highlightbackground=C_LED_SHADOW)
+            n["bar"].config(bg=bg)
+            n["label"].config(bg=bg)
+            n["icon"].config(bg=C_GREEN if on else bg, fg="#ffffff" if on else C_SIDE_TEXT)
+            d = n.get("dot")
+            if d is not None:
+                d.config(bg=bg)
+                if on and not getattr(self, "side_collapsed", False):
+                    d.pack(side="right", padx=(0, 12))
+                else:
+                    d.pack_forget()
+
+    def _led_anim(self):
+        """Giao diện 7: đèn nhịp thở + thanh tải sọc chạy."""
+        if not getattr(self, "led_cards", None):
+            return
+        self.after(120, self._led_anim)
+        self._led_phase = (getattr(self, "_led_phase", 0) + 1) % 24
+        t = (1 + math.cos(self._led_phase / 24 * 2 * math.pi)) / 2 * 0.8
+        for c in self.led_cards.values():
+            if c["state"] in ("run", "err"):
+                self._draw_led(c["cv"], c["state"], dim=t)
+        st = getattr(self, "_led_overall", "ok")
+        if getattr(self, "_led_issues", None):
+            self._draw_led(self.led_alert_cv, "err", dim=t)
+        if st != "ok":
+            n = self.nav.get(getattr(self, "page", ""), {})
+            if n.get("dot") is not None and n["dot"].winfo_ismapped():
+                self._draw_led(n["dot"], st, dim=t)
+        try:
+            for bar, _iv, _pv in self.energy.values():
+                if isinstance(bar, EnergyBar) and 0 < bar.pct:
+                    bar.off = (bar.off + 2) % 16
+                    bar._draw()
+        except (AttributeError, tk.TclError):
+            pass
+
     def _led_set(self, key, state, text):
         c = self.led_cards.get(key)
         if not c:
             return
-        wrap = max(110, (self.side_w - 56) // (1 if c["span"] == 2 else 2) - 46)
-        if c["state"] != state:
+        wrap = max(110, (self.side_w - 56) // (1 if c["span"] == 2 else 2) - (200 if c.get("narrow") else 46))
+        changed = c["state"] != state
+        if changed:
             c["state"] = state
             bg = self.LED_BG[state]
             c["f"].config(bg=bg, highlightbackground=self.LED_BD[state])
-            for w in (c["cv"], c["tx"], c["t1"], c["t2"]):
+            for w in (c["cv"], c["tx"], c["t1"], c["t2"]) + tuple(c.get("extra", ())):
                 w.config(bg=bg)
             c["t2"].config(fg=self.LED_TXT[state])
         if c["t2"].cget("text") != text or c["t2"].cget("wraplength") != wrap:
             c["t2"].config(text=text, wraplength=wrap)
-        self._draw_led(c["cv"], state, dim=(state == "run" and self._led_blink))
+        if not (ANIM and state in ("run", "err") and not changed):     # giao diện 7: _led_anim tự vẽ nhịp thở
+            self._draw_led(c["cv"], state, dim=(state == "run" and self._led_blink))
 
     def _led_slow(self):
         """Việc chậm chạy nền (30s/lần): phiên bản rclone, ổ RaiDrive, thông tin tài khoản PikPak."""
@@ -2461,7 +2692,11 @@ class App(tk.Tk):
                     pass
                 done, n = getattr(self, "_batch", (0, 0))
                 txt = (f"{done}/{n} · " if n else "") + f"{getattr(self, '_dl_pct', 0)}%"
-                self._led_set("dl", "run", txt + (f" · {info}" if info and info != "—" else ""))
+                if LED_LIST:
+                    sp = re.search(r"[\d.,]+\s*[KMG]i?B/s", info or "")
+                    self._led_set("dl", "run", txt + (f" · {sp.group(0).replace('.', ',')}" if sp else ""))
+                else:
+                    self._led_set("dl", "run", txt + (f" · {info}" if info and info != "—" else ""))
             else:
                 self._led_set("dl", "off", "Rảnh")
             # PikPak + thông tin tài khoản
@@ -2490,13 +2725,21 @@ class App(tk.Tk):
                     lines.append(f"{human_size(acc['used'])} / {human_size(acc['total'])}")
                 elif acc.get("used"):
                     lines.append(f"Đã dùng {human_size(acc['used'])}")
+            if LED_LIST:                         # thẻ rộng: "Đã kết nối · VIP (hạn ...)" / email · dung lượng
+                head = lines[0]
+                rest = [x for x in lines[1:] if not x.startswith(("★", "Không VIP"))]
+                vip = [x for x in lines[1:] if x.startswith(("★", "Không VIP"))]
+                if vip:
+                    head += " · " + vip[0].replace("★ ", "").replace(" · hạn", " (hạn") + (")" if "hạn" in vip[0] else "")
+                lines = [head] + ([" · ".join(rest)] if rest else [])
             self._led_set("pk", st, "\n".join(lines))
             # RaiDrive (tool này không bắt buộc: chưa đặt ổ = "Không dùng")
             rd = getattr(self, "_led_rd", None)
             if not rd:
                 self._led_set("rd", "off", "Không dùng")
             elif rd[1]:
-                self._led_set("rd", "ok", f"Đã gắn ổ {rd[0].rstrip(os.sep)}")
+                self._led_set("rd", "ok", (f"Ổ {rd[0].rstrip(os.sep)} đã gắn" if LED_LIST
+                                           else f"Đã gắn ổ {rd[0].rstrip(os.sep)}"))
             else:
                 self._led_set("rd", "err", f"Chưa gắn ổ {rd[0].rstrip(os.sep)}")
                 issues.append(f"RaiDrive chưa gắn ổ {rd[0].rstrip(os.sep)}")
@@ -2509,7 +2752,8 @@ class App(tk.Tk):
             # Tự quét
             on = bool(self.cfg.get("auto_scan"))
             if on and self.next_auto_ts:
-                self._led_set("auto", "ok", f"Lần tới {dt.datetime.fromtimestamp(self.next_auto_ts):%H:%M}")
+                self._led_set("auto", "ok", ("Bật · lần tới " if LED_LIST else "Lần tới ")
+                              + f"{dt.datetime.fromtimestamp(self.next_auto_ts):%H:%M}")
             else:
                 self._led_set("auto", "off", "Đang tắt")
             self.side_auto.config(text="Bật" if on else "Tắt", fg="#16a34a" if on else "#475569")
@@ -2530,7 +2774,8 @@ class App(tk.Tk):
                 if h >= 24:
                     self._led_set("bk", "run", f"Chưa đồng bộ ({h} giờ)")
                 else:
-                    self._led_set("bk", "ok", f"Đã đồng bộ {bk[:11]}")
+                    today = bk[6:11] == f"{dt.date.today():%d/%m}"
+                    self._led_set("bk", "ok", f"Đã đồng bộ {bk[:5] if today else bk[:11]}")
             # Lỗi
             d = DATA_DIR / "BaoLoi"
             n = len(list(d.glob("BaoLoi_*.txt"))) if d.is_dir() else 0
@@ -2538,7 +2783,7 @@ class App(tk.Tk):
                 self._led_set("err", "err", f"{n} lỗi · bấm để xem")
                 issues.append(f"{n} báo cáo lỗi (bấm thẻ Lỗi để xem)")
             else:
-                self._led_set("err", "ok", "Không có lỗi")
+                self._led_set("err", "off" if LED_LIST else "ok", "Không có lỗi")
             for p_ in getattr(self, "_health_probs", []) or []:
                 if not any(k in p_ for k in ("rclone", "PikPak")):
                     issues.append(p_)
@@ -2546,6 +2791,21 @@ class App(tk.Tk):
             return
         self._led_issues = issues
         n = len(issues)
+        busy = bool(self.worker and self.worker.is_alive())
+        self._led_overall = "err" if n else ("run" if busy else "ok")
+        if LED_LIST:
+            self.led_alert_t1.config(text=f"Có {n} mục cần xử lý" if n else "Mọi thứ hoạt động tốt")
+            self.led_alert_t2.config(text="Tool chưa tự tải được cho tới khi sửa · bấm để xem" if n else
+                                     f"Thư viện: {len(self.owned):,} tập · Máy: {MACHINE}".replace(",", "."),
+                                     wraplength=self.side_w - 110)
+            if not ANIM:
+                self._draw_led(self.led_alert_cv, "err" if n else "ok")
+            nv = self.nav.get(getattr(self, "page", ""), {})
+            if nv.get("dot") is not None and (not ANIM or self._led_overall == "ok"):
+                self._draw_led(nv["dot"], self._led_overall, dim=(self._led_overall != "ok" and self._led_blink))
+            if ANIM and not n:
+                self._draw_led(self.led_alert_cv, "ok")
+            return
         self.led_alert_t1.config(text=f"Có {n} mục cần xử lý" if n else "Mọi thứ đều ổn")
         self.led_alert_t2.config(text="Tool chưa tự tải được cho tới khi sửa" if n else "Sẵn sàng tự quét & tải",
                                  wraplength=self.side_w - 100)
@@ -4618,6 +4878,10 @@ class App(tk.Tk):
                                       highlightthickness=1)
             self.top_theme.pack(side="right", padx=(0, 10))
             self.top_theme.bind("<Button-1>", lambda e: self._theme_menu(self.top_theme))
+        if BTN_3D:
+            for w in (self.top_auto, self.top_upd, self.top_lock, getattr(self, "top_theme", None)):
+                if w is not None:
+                    w.config(relief="raised", bd=2, highlightthickness=0)
 
     # ================================================================ MẬT KHẨU ADMIN
     @staticmethod
@@ -4759,13 +5023,13 @@ class App(tk.Tk):
         rem = removed_themes(self.cfg)
         for key in THEMES:
             if key not in rem:
-                m.add_radiobutton(label=("★  " if key == self.layout else "⭐  Đặt mặc định: ") + THEME_NAMES[key],
+                m.add_radiobutton(label=("★  " if key == self.layout else "⭐  Đặt mặc định: ") + theme_label(self.cfg, key),
                                   variable=var, value=key, command=lambda k=key: self.switch_theme(k))
         extra = [k for k in THEMES if k != "classic" and k not in rem]
         if extra:
             m.add_separator()
             for k in extra:
-                m.add_command(label=f"🗑  Xóa {THEME_SHORT[k]}...", command=lambda k=k: self.remove_theme(k))
+                m.add_command(label=f"🗑  Xóa {theme_label(self.cfg, k, True)}...", command=lambda k=k: self.remove_theme(k))
         try:
             m.tk_popup(widget.winfo_rootx(), widget.winfo_rooty() + widget.winfo_height() + 2)
         finally:
@@ -4788,7 +5052,7 @@ class App(tk.Tk):
             return
         old = self.cfg.get("ui_theme")
         self.cfg["ui_theme"] = name
-        if not self._restart_ui(f"Đặt mặc định: {THEME_NAMES[name]}"):
+        if not self._restart_ui(f"Đặt mặc định: {theme_label(self.cfg, name)}"):
             self.cfg["ui_theme"] = old
 
     def _set_removed(self, rem):
@@ -4801,7 +5065,7 @@ class App(tk.Tk):
         old = (self.cfg.get("ui_theme"), list(self.cfg.get("removed_themes") or []))
         rem = removed_themes(self.cfg) | {name}
         if self.layout != name:                    # xóa giao diện không đang dùng -> không cần khởi động lại
-            if messagebox.askyesno(APP_NAME, f"Xóa {THEME_SHORT[name]}?\n(Khôi phục lại được ở Cài đặt → Chung → "
+            if messagebox.askyesno(APP_NAME, f"Xóa {theme_label(self.cfg, name, True)}?\n(Khôi phục lại được ở Cài đặt → Chung → "
                                              "Giao diện.)"):
                 self._set_removed(rem)
                 self.save_config()
@@ -4810,12 +5074,12 @@ class App(tk.Tk):
                         self.top_theme.pack_forget()
                     except (AttributeError, tk.TclError):
                         pass
-                self.log(f"🗑 Đã xóa {THEME_SHORT[name]}.")
+                self.log(f"🗑 Đã xóa {theme_label(self.cfg, name, True)}.")
                 self._settings_refresh_theme()
             return
         self._set_removed(rem)
         self.cfg["ui_theme"] = "classic"
-        if not self._restart_ui(f"Xóa {THEME_SHORT[name]} và quay về giao diện gốc?\n"
+        if not self._restart_ui(f"Xóa {theme_label(self.cfg, name, True)} và quay về giao diện gốc?\n"
                                 "(Khôi phục lại được ở Cài đặt → Chung → Giao diện.)"):
             self.cfg["ui_theme"], self.cfg["removed_themes"] = old
 
@@ -4825,10 +5089,10 @@ class App(tk.Tk):
         rem = removed_themes(self.cfg) - {name}
         self._set_removed(rem)
         self.save_config()
-        self.log(f"↺ Đã khôi phục {THEME_SHORT[name]}.")
+        self.log(f"↺ Đã khôi phục {theme_label(self.cfg, name, True)}.")
         old = self.cfg.get("ui_theme")
         self.cfg["ui_theme"] = name
-        if not self._restart_ui(f"Đã khôi phục {THEME_SHORT[name]}. Chuyển sang giao diện này luôn?"):
+        if not self._restart_ui(f"Đã khôi phục {theme_label(self.cfg, name, True)}. Chuyển sang giao diện này luôn?"):
             self.cfg["ui_theme"] = old
             self.save_config()
             self._settings_refresh_theme()
@@ -4844,10 +5108,10 @@ class App(tk.Tk):
     def _fill_theme_box(self, fr):
         """Danh sách giao diện: ⭐ Đặt mặc định (tool mở bằng giao diện này) · 🗑 Xóa (trừ giao diện gốc)."""
         rem = removed_themes(self.cfg)
-        ttk.Label(fr, text="Mặc định hiện tại: " + THEME_NAMES[self.layout], style="Muted.TLabel").grid(
+        ttk.Label(fr, text="Mặc định hiện tại: " + theme_label(self.cfg, self.layout), style="Muted.TLabel").grid(
             row=0, column=0, columnspan=4, sticky="w", pady=(0, 6))
         for r, key in enumerate(THEMES, 1):
-            ttk.Label(fr, text=THEME_NAMES[key]).grid(row=r, column=0, sticky="w", pady=3, padx=(0, 14))
+            ttk.Label(fr, text=theme_label(self.cfg, key)).grid(row=r, column=0, sticky="w", pady=3, padx=(0, 14))
             if key in rem:
                 ttk.Label(fr, text="đã xóa", style="Muted.TLabel").grid(row=r, column=1, sticky="w")
                 ttk.Button(fr, text="↺  Khôi phục", style="Small.TButton",
@@ -4864,6 +5128,27 @@ class App(tk.Tk):
             else:
                 ttk.Button(fr, text="🗑  Xóa", style="DangerSmall.TButton",
                            command=lambda k=key: self.remove_theme(k)).grid(row=r, column=2, sticky="w", padx=6)
+            ttk.Button(fr, text="✎  Đổi tên", style="Small.TButton",
+                       command=lambda k=key: self.rename_theme(k)).grid(row=r, column=3, sticky="w")
+
+    def rename_theme(self, key):
+        """Đổi tên hiển thị của 1 giao diện (để trống = tên mặc định)."""
+        from tkinter import simpledialog
+        cur = theme_label(self.cfg, key)
+        new = simpledialog.askstring(APP_NAME, f"Tên mới cho \"{cur}\"\n(để trống = tên mặc định: {THEME_NAMES[key]})",
+                                     initialvalue=cur, parent=self)
+        if new is None:
+            return
+        names = dict(self.cfg.get("theme_names") or {})
+        new = new.strip()[:80]
+        if new and new != THEME_NAMES[key]:
+            names[key] = new
+        else:
+            names.pop(key, None)
+        self.cfg["theme_names"] = names
+        self.save_config()
+        self.log(f"✎ Đổi tên giao diện: {theme_label(self.cfg, key)}")
+        self._settings_refresh_theme()
 
     # ================================================================ BỐ CỤC WORKSPACE / THEO PHIM (v2.0)
     AV_COLORS = ("#e11d48", "#7c3aed", "#0891b2", "#ea580c", "#16a34a", "#475569", "#db2777", "#0d9488",
@@ -5974,6 +6259,8 @@ class App(tk.Tk):
             n["bar"].config(bg=C_SIDE_ACTIVE if on else bg)
             n["icon"].config(fg=C_SIDE_ACTIVE if on else C_SIDE_MUTED)
             n["label"].config(fg=C_SIDE_SEL_TEXT if on else C_SIDE_TEXT)
+        if LED_LIST and getattr(self, "led_cards", None) is not None:
+            self._led_nav_style(key)
 
     def _nav_hover(self, key, inside):
         if getattr(self, "page", None) == key:
@@ -6064,7 +6351,7 @@ class App(tk.Tk):
     def _stat_card(self, parent, title, color, glyph=""):
         """Thẻ số liệu kiểu đồng hồ máy: nhãn nhỏ in hoa, số lớn font màn hình, vạch màu + đèn báo."""
         card = tk.Frame(parent, bg=C_PANEL, highlightbackground=C_BORDER, highlightthickness=1)
-        tk.Frame(card, bg=color, width=5).pack(side="left", fill="y")
+        tk.Frame(card, bg=color, width=7 if STAT_ICONS else 5).pack(side="left", fill="y")
         body = tk.Frame(card, bg=C_PANEL, padx=14, pady=10)
         body.pack(side="left", fill="both", expand=True)
         var = tk.StringVar(value="0")
@@ -6072,9 +6359,24 @@ class App(tk.Tk):
         top.pack(fill="x")
         tk.Label(top, text="●", bg=C_PANEL, fg=color, font=(FONT, 8)).pack(side="left")
         tk.Label(top, text="  " + title.upper(), bg=C_PANEL, fg=C_MUTED, font=(FONT, 8, "bold")).pack(side="left")
-        if glyph:
+        if glyph and STAT_ICONS:                     # ô vuông màu nổi có biểu tượng trắng
+            s_ = 28
+            cv = tk.Canvas(top, width=s_ + 2, height=s_ + 3, bg=C_PANEL, highlightthickness=0)
+            cv.pack(side="right")
+            sh = _mix(color, "#000000", 0.35)
+            for (x0, y0, c_) in ((1, 3, sh), (1, 1, color)):
+                rr = 7
+                cv.create_rectangle(x0 + rr, y0, x0 + s_ - rr, y0 + s_, fill=c_, outline="")
+                cv.create_rectangle(x0, y0 + rr, x0 + s_, y0 + s_ - rr, fill=c_, outline="")
+                for ox, oy in ((0, 0), (s_ - 2 * rr, 0), (0, s_ - 2 * rr), (s_ - 2 * rr, s_ - 2 * rr)):
+                    cv.create_oval(x0 + ox, y0 + oy, x0 + ox + 2 * rr, y0 + oy + 2 * rr, fill=c_, outline="")
+            cv.create_rectangle(5, 3, s_ - 3, 11, fill=_mix(color, "#ffffff", 0.3), outline="")
+            cv.create_text(s_ / 2 + 1, s_ / 2 + 1, text={"▦": "■", "●": "●", "⬇": "⬇", "✔": "✔"}.get(glyph, glyph),
+                           fill="#ffffff", font=(FONT, 11, "bold"))
+        elif glyph:
             tk.Label(top, text=glyph, bg=C_PANEL, fg=C_GLYPH, font=(FONT, 12)).pack(side="right")
-        tk.Label(body, textvariable=var, bg=C_PANEL, fg=color, font=(MONO, 22, "bold")).pack(anchor="w", pady=(2, 0))
+        tk.Label(body, textvariable=var, bg=C_PANEL, fg=color,
+                 font=(FONT, 24, "bold") if STAT_ICONS else (MONO, 22, "bold")).pack(anchor="w", pady=(2, 0))
         return card, var
 
     def _apply_scan_filter(self):

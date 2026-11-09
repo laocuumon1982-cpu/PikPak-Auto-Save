@@ -1,6 +1,15 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v2.4  (09/11/2026)
+  - Thêm 3 giao diện theo mẫu:
+    · Giao diện 5: nền sáng, nút nổi 3D, ô thống kê có biểu tượng vuông màu, thanh tải có sọc chéo, mục menu đang
+      chọn là thẻ trắng nổi (biểu tượng ô xanh lá + đèn trạng thái), thẻ "Mọi thứ hoạt động tốt" (thư viện, máy),
+      BẢNG ĐÈN TRẠNG THÁI dạng danh sách: PikPak · RaiDrive · rclone · Tự quét (mỗi N phút) · Đang tải · Sao lưu · Lỗi;
+    · Giao diện 6: như 5, nền tối;
+    · Giao diện 7: như 5, đèn nhịp thở, thanh tải sọc chạy.
+  - Đổi tên từng giao diện: Cài đặt > Chung > Giao diện > "✎ Đổi tên".
+
 v2.3  (09/11/2026)
   - Bỏ giao diện 4 bản v2.2, làm lại Giao diện 4 theo đúng mẫu:
     · thẻ cảnh báo nền trắng ngay dưới menu (đèn đỏ "Có N mục cần xử lý" / đèn xanh "Mọi thứ đều ổn");
