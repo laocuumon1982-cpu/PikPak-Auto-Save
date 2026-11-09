@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v2.4 by Duy Anh
+PikPak Auto Save v2.5 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -43,7 +43,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v2.4 by Duy Anh"
+APP_VERSION = "v2.5 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -228,17 +228,26 @@ THEMES["proanim"] = dict(THEMES["pro"], ANIM=True, C_BLUE="#2f7fa3",
                                       "all": ("#86efac", "#16a34a")})
 THEME_NAMES = {"classic": "Giao diện 1  (gốc v1.3)",
                "fresh": "Giao diện 2  (thanh bên xanh da trời nhạt)",
-               "fresh2": "Giao diện 3  (như 2 · thanh tải dải liền · nhãn trạng thái có viền)",
+               "fresh2": "Giao diện 3  (thanh bên xanh da trời nhạt · thanh tải dải liền · nhãn trạng thái có viền)",
                "fresh3": "Giao diện 4  (như 3 · bảng đèn trạng thái · tài khoản PikPak)",
                "pro": "Giao diện 5  (sáng · nút nổi 3D · bảng đèn dạng danh sách)",
                "prodark": "Giao diện 6  (tối · như 5)",
-               "proanim": "Giao diện 7  (như 5 · đèn nhịp thở, thanh tải sọc chạy)"}
+               "proanim": "Giao diện 7  (nút nổi 3D · bảng đèn trạng thái · đèn nhịp thở, thanh tải sọc chạy)"}
 THEME_SHORT = {"classic": "giao diện 1", "fresh": "giao diện 2", "fresh2": "giao diện 3", "fresh3": "giao diện 4", "pro": "giao diện 5",
                "prodark": "giao diện 6", "proanim": "giao diện 7"}
 
 
+# v2.5: chỉ giữ giao diện 1, 3, 7 - giao diện đã bỏ tự chuyển sang giao diện gần giống
+THEME_ALIAS = {"fresh": "fresh2", "fresh3": "fresh2", "pro": "proanim", "prodark": "proanim"}
+for _k in THEME_ALIAS:
+    THEMES.pop(_k, None)
+    THEME_NAMES.pop(_k, None)
+    THEME_SHORT.pop(_k, None)
+
+
 def apply_theme(name):
     """Đổi bảng màu toàn cục (gọi trước khi dựng giao diện). Giao diện cũ đã bỏ (động, Dashboard) -> giao diện gốc."""
+    name = THEME_ALIAS.get(name, name)
     name = name if name in THEMES else "classic"
     globals().update(THEMES[name])
     return name
@@ -2511,7 +2520,6 @@ class App(tk.Tk):
 
         layout = (("pk", "PikPak", lambda: self.get_rclone() if not find_rclone() else (
                       self.select_page("settings"), self._settings_page("pikpak"))),
-                  ("rd", "RaiDrive", lambda: self.select_page("settings")),
                   ("rc", "rclone", lambda: self.get_rclone() if not find_rclone() else (
                       self.select_page("settings"), self._settings_page("pikpak"))),
                   ("auto", "Tự quét", toggle_auto),
@@ -2735,7 +2743,9 @@ class App(tk.Tk):
             self._led_set("pk", st, "\n".join(lines))
             # RaiDrive (tool này không bắt buộc: chưa đặt ổ = "Không dùng")
             rd = getattr(self, "_led_rd", None)
-            if not rd:
+            if "rd" not in self.led_cards:       # giao diện 7: không có thẻ RaiDrive
+                pass
+            elif not rd:
                 self._led_set("rd", "off", "Không dùng")
             elif rd[1]:
                 self._led_set("rd", "ok", (f"Ổ {rd[0].rstrip(os.sep)} đã gắn" if LED_LIST
