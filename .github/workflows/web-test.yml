@@ -1,5 +1,4 @@
-# Đóng gói bản THỬ v3.0 (giao diện web, pywebview) - chỉ chạy trên nhánh v3-web, KHÔNG tạo Release
-# (bản v2.x trên máy người dùng không bị cập nhật lên bản thử). Kết quả: Artifact "PikPak-Auto-Save-v3-thu".
+# Thử đóng gói bản v3 (giống hệt release.yml) + chạy thử trên Windows - chỉ trên nhánh v3-web, KHÔNG tạo Release.
 name: Build v3 test (web UI)
 on:
   push:
@@ -14,28 +13,27 @@ jobs:
         with:
           python-version: "3.12"
       - name: Cai thu vien
-        run: python -m pip install requests pystray pillow pyinstaller pywebview
+        run: python -m pip install requests pystray pillow pywebview pyinstaller
       - name: Dong goi exe
-        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save v3 (thu nghiem)" --icon icon.ico --add-data "icon.ico;." --add-data "web;web" --collect-all webview --collect-all pythonnet --collect-all clr_loader --hidden-import pystray._win32 pikpak_auto_save_web.py
-      - name: Chay thu exe (mo cua so, doc giao dien, chup man hinh)
+        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save" --icon icon.ico --add-data "icon.ico;." --add-data "web;web" --hidden-import pikpak_web --collect-all webview --collect-all pythonnet --collect-all clr_loader --hidden-import pystray._win32 auto_download_pikpak_share.py
+      - name: Tao thu muc Portable
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force T | Out-Null
-          Copy-Item 'dist/PikPak Auto Save v3 (thu nghiem).exe' T/
-          $p = Start-Process -FilePath 'T/PikPak Auto Save v3 (thu nghiem).exe' -ArgumentList '--selftest' -PassThru
-          if (-not $p.WaitForExit(90000)) { Stop-Process -Id $p.Id -Force; Write-Host "Qua 90s - dung" }
-          if (Test-Path T/selftest.txt) { Get-Content T/selftest.txt } else { Write-Host "KHONG CO selftest.txt" }
-          Get-ChildItem T
-      - name: Tao file zip
+          New-Item -ItemType Directory -Force PikPak-Auto-Save_Portable | Out-Null
+          Copy-Item 'dist/PikPak Auto Save.exe', auto_download_pikpak_share.py, pikpak_web.py, icon.ico, *.txt PikPak-Auto-Save_Portable/
+          Copy-Item -Recurse web PikPak-Auto-Save_Portable/
+      - name: Chay thu exe
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force PikPak-Auto-Save-v3-thu | Out-Null
-          Copy-Item 'dist/PikPak Auto Save v3 (thu nghiem).exe', HUONG_DAN_V3_THU.txt PikPak-Auto-Save-v3-thu/
-          Compress-Archive -Force PikPak-Auto-Save-v3-thu PikPak-Auto-Save-v3-thu.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: PikPak-Auto-Save-v3-thu
-          path: |
-            PikPak-Auto-Save-v3-thu.zip
-            T/selftest.txt
-            T/selftest.png
+          foreach ($case in @("portable", "exe_only")) {
+            $d = "T_$case"
+            New-Item -ItemType Directory -Force $d | Out-Null
+            if ($case -eq "portable") { Copy-Item -Recurse PikPak-Auto-Save_Portable/* $d/ } else { Copy-Item 'dist/PikPak Auto Save.exe' $d/ }
+            $p = Start-Process -FilePath "$d/PikPak Auto Save.exe" -ArgumentList '--selftest' -PassThru
+            if (-not $p.WaitForExit(120000)) { Stop-Process -Id $p.Id -Force; Write-Host "[$case] qua 120s" }
+            if (Test-Path "$d/selftest.txt") { Write-Host "[$case] $(Get-Content $d/selftest.txt -Raw)" } else { Write-Host "[$case] KHONG CO selftest.txt" }
+            if (Test-Path "$d/Data/log.txt") { Get-Content "$d/Data/log.txt" -Tail 15 }
+            foreach ($n in @("selftest", "selftest_history")) {
+              if (Test-Path "$d/$n.jpg") { Write-Host "B64BEGIN_${case}_$n"; [Convert]::ToBase64String([IO.File]::ReadAllBytes("$d/$n.jpg")); Write-Host "B64END" }
+            }
+          }

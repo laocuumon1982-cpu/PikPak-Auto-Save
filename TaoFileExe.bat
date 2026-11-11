@@ -7,15 +7,18 @@ echo   DONG GOI PIKPAK AUTO SAVE THANH BAN PORTABLE (.exe)
 echo ==========================================================
 echo.
 echo [1/4] Cai thu vien can thiet...
-python -m pip install --upgrade requests pystray pillow pyinstaller
+python -m pip install --upgrade requests pystray pillow pywebview pyinstaller
 if errorlevel 1 goto :loi
 echo.
 echo [2/4] Dong goi file exe (mat 1-3 phut)...
-python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
+python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save" --icon icon.ico --add-data "icon.ico;." --add-data "web;web" --hidden-import pikpak_web --collect-all webview --collect-all pythonnet --collect-all clr_loader --hidden-import pystray._win32 auto_download_pikpak_share.py
 if errorlevel 1 goto :loi
 set OUT=PikPak-Auto-Save_Portable
 if not exist "%OUT%" mkdir "%OUT%"
 copy /y "dist\PikPak Auto Save.exe" "%OUT%\" >nul
+copy /y "auto_download_pikpak_share.py" "%OUT%\" >nul
+copy /y "pikpak_web.py" "%OUT%\" >nul
+xcopy /e /i /y "web" "%OUT%\web" >nul
 copy /y "HUONG_DAN.txt" "%OUT%\" >nul
 copy /y "CHANGELOG.txt" "%OUT%\" >nul
 if exist "HUONG_DAN_CAP_NHAT.txt" copy /y "HUONG_DAN_CAP_NHAT.txt" "%OUT%\" >nul

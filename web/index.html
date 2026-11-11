@@ -4,170 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PikPak Auto Save</title>
-<style>
-:root{
-  --bg:#eef1f5; --card:#ffffff; --panel:#ffffff; --text:#1f2937; --muted:#6b7280; --border:#e2e6ec;
-  --head:#f7f8fa; --row-sel:#fde8e8; --row-sel-b:#f6caca; --soft:#fdf0f0; --soft-b:#f6caca;
-  --red:#e0262a; --red-d:#b51d20; --orange:#ea580c; --blue:#2f7fa3; --blue2:#3b82f6; --green:#16a34a; --gray:#9ca3af;
-  --side:#e3f0fc; --side2:#d4e8fb; --side-text:#0f172a; --side-muted:#334155; --side-card:#ffffff; --side-bd:#d3e1ee;
-  --shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 2px 0 #c6d4e2, 0 6px 14px rgba(30,60,100,.10);
-  --btn-sh:0 1px 0 #fff inset, 0 2px 0 #c9cfd8, 0 3px 8px rgba(0,0,0,.08);
-  --log-bg:#0e1a12; --log-fg:#c7f08a; --track:#e9edf2;
-}
-body.dark{
-  --bg:#10172a; --card:#172036; --panel:#1a2338; --text:#e5e7eb; --muted:#94a3b8; --border:#2a3552;
-  --head:#1a2338; --row-sel:#3a1d29; --row-sel-b:#5b2330; --soft:#24151d; --soft-b:#5b2330;
-  --side:#131b2f; --side2:#182136; --side-text:#f1f5f9; --side-muted:#cbd5e1; --side-card:#1d2740; --side-bd:#2c3856;
-  --shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 2px 0 #0a0f1c, 0 6px 14px rgba(0,0,0,.35);
-  --btn-sh:0 1px 0 rgba(255,255,255,.06) inset, 0 2px 0 #0a0f1c, 0 3px 8px rgba(0,0,0,.3);
-  --log-bg:#0a120d; --track:#0b1120;
-}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0}
-body{font-family:"Segoe UI","Inter",system-ui,sans-serif;font-size:13px;color:var(--text);background:var(--bg);
-  display:flex;overflow:hidden;-webkit-font-smoothing:antialiased;user-select:none}
-input,select,button{font:inherit;color:inherit}
-
-/* ---------------- cột trái */
-.side{width:340px;flex:none;background:linear-gradient(180deg,var(--side),var(--side2));display:flex;flex-direction:column;
-  padding:14px 14px 14px;border-right:1px solid var(--side-bd);overflow-y:auto;overflow-x:hidden;color:var(--side-text)}
-.side.mini{width:76px}
-.side.mini .hide-mini{display:none!important}
-.brand{display:flex;align-items:center;gap:10px;padding:2px 4px 12px;border-bottom:1px solid var(--side-bd)}
-.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,#4f7df5,#2d55c8);color:#fff;font-weight:800;
-  display:grid;place-items:center;font-size:17px;box-shadow:0 2px 0 #1e3f9c,0 4px 10px rgba(45,85,200,.35)}
-.brand b{display:block;font-size:14px;letter-spacing:.3px}
-.brand small{color:var(--side-muted);font-size:11px}
-.brand .fold{margin-left:auto;cursor:pointer;font-size:20px;font-weight:700;padding:0 6px;color:var(--side-text)}
-.menu-l{font-size:11px;font-weight:800;letter-spacing:.6px;margin:14px 6px 6px;color:var(--side-muted)}
-.nav{display:flex;align-items:center;gap:12px;padding:11px 12px;margin:2px 0;border-radius:10px;cursor:pointer;font-size:14.5px;
-  font-weight:600;border:1px solid transparent}
-.nav:hover{background:rgba(255,255,255,.45)}
-body.dark .nav:hover{background:rgba(255,255,255,.05)}
-.nav .ic{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;font-size:15px}
-.nav.on{background:var(--side-card);border-color:var(--side-bd);box-shadow:var(--shadow)}
-.nav.on .ic{background:linear-gradient(160deg,#34c759,#15913f);color:#fff;box-shadow:0 2px 0 #0f6e30}
-.nav .led{margin-left:auto;display:none}
-.nav.on .led{display:block}
-.card{background:var(--side-card);border:1px solid var(--side-bd);border-radius:12px;box-shadow:var(--shadow)}
-.alert{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-top:16px;cursor:pointer}
-.alert b{font-size:14.5px;display:block}
-.alert small{color:var(--side-muted);font-size:12px}
-.grow{flex:1;min-height:10px}
-.panel{background:rgba(255,255,255,.35);border:1px solid var(--side-bd);border-radius:14px;padding:12px}
-body.dark .panel{background:rgba(255,255,255,.03)}
-.panel h4{margin:0;font-size:11.5px;letter-spacing:.6px;font-weight:800}
-.legend{display:flex;gap:12px;margin:4px 0 10px;font-size:11.5px;color:var(--side-muted)}
-.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
-.tile{display:flex;align-items:center;gap:12px;padding:10px 12px;margin-top:8px;cursor:pointer;transition:transform .08s}
-.tile:active{transform:translateY(1px)}
-.tile b{font-size:14px;display:block}
-.tile small{font-size:12.5px;display:block;white-space:pre-line;font-weight:600}
-.tile .chev{margin-left:auto;font-weight:800;color:var(--side-muted);font-size:16px}
-.tile.err{background:#fff3f3;border-color:#f3c4c4}
-body.dark .tile.err{background:#2c1820;border-color:#6b2a36}
-.s-ok{color:var(--green)} .s-run{color:#dc2626} .s-err{color:var(--red)} .s-off{color:var(--side-muted)}
-.auto-pick{margin-left:auto;display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px}
-.auto-pick select{border:1px solid var(--side-bd);border-radius:6px;padding:2px 4px;background:var(--side-card)}
-
-/* đèn LED bóng */
-.led{width:22px;height:22px;border-radius:50%;flex:none;position:relative;
-  background:radial-gradient(circle at 35% 30%,#ffffff 0 12%,var(--l1) 30%,var(--l2) 72%,var(--l3) 100%);
-  box-shadow:0 0 0 2px rgba(255,255,255,.75),0 1px 3px rgba(0,0,0,.35)}
-.led.big{width:34px;height:34px}
-.led.sm{width:16px;height:16px}
-.led.ok{--l1:#7ef0a2;--l2:#22b24c;--l3:#0f7a30}
-.led.run{--l1:#ff9a9a;--l2:#e23b3b;--l3:#a11414}
-.led.err{--l1:#ff9a9a;--l2:#e23b3b;--l3:#a11414}
-.led.off{--l1:#f3f4f6;--l2:#b8bec7;--l3:#7d8590}
-.led.amb{--l1:#ffe08a;--l2:#f5a623;--l3:#b86b00}
-.led.run,.led.err{animation:breathe 1.6s ease-in-out infinite}
-@keyframes breathe{0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,.75),0 0 2px 1px rgba(226,59,59,.25)}
-  50%{box-shadow:0 0 0 2px rgba(255,255,255,.75),0 0 12px 5px rgba(226,59,59,.55);filter:brightness(1.12)}}
-
-/* ---------------- vùng chính */
-.main{flex:1;display:flex;flex-direction:column;min-width:0;padding:16px 22px 10px}
-.top{display:flex;align-items:flex-start;gap:12px}
-.top h1{margin:0;font-size:24px;font-weight:800}
-.top .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
-.top .acts{margin-left:auto;display:flex;gap:10px}
-.btn{border:1px solid #cfd5de;background:linear-gradient(#ffffff,#eef1f5);border-radius:8px;padding:7px 14px;font-weight:700;
-  cursor:pointer;box-shadow:var(--btn-sh);white-space:nowrap;transition:transform .06s,box-shadow .06s}
-body.dark .btn{border-color:#334160;background:linear-gradient(#24304b,#1b2540)}
-.btn:hover{filter:brightness(1.03)}
-.btn:active{transform:translateY(2px);box-shadow:0 0 0 #c9cfd8,0 1px 3px rgba(0,0,0,.15) inset}
-.btn:disabled{opacity:.5;cursor:default;transform:none}
-.btn.red{background:linear-gradient(#f0484b,#cf1f23);color:#fff;border-color:#a8171a;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 2px 0 #8f1316,0 4px 10px rgba(207,31,35,.3)}
-.btn.out{color:var(--red);border-color:#e8a3a5}
-.btn.pill{color:var(--red);background:linear-gradient(#fff3f3,#ffe3e3);border-color:#f3b9bb}
-body.dark .btn.pill{background:linear-gradient(#3a1d29,#2a1620);border-color:#6b2a36}
-.btn.lock{color:var(--green)}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}
-.stat{background:var(--card);border:1px solid var(--border);border-left:7px solid var(--c);border-radius:12px;padding:12px 14px 10px;
-  box-shadow:0 2px 0 rgba(0,0,0,.04),0 6px 14px rgba(30,60,100,.08);position:relative}
-.stat .l{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--muted)}
-.stat .l::before{content:"●";color:var(--muted);margin-right:5px}
-.stat .n{font-size:30px;font-weight:800;color:var(--c);margin-top:4px;line-height:1.1}
-.stat .sq{position:absolute;right:14px;top:12px;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#fff;
-  font-size:14px;background:linear-gradient(160deg,color-mix(in srgb,var(--c) 70%,#fff),var(--c));
-  box-shadow:0 2px 0 color-mix(in srgb,var(--c) 70%,#000),0 4px 8px color-mix(in srgb,var(--c) 35%,transparent)}
-.energy{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-top:12px;padding:10px 16px;
-  display:grid;grid-template-columns:120px minmax(160px,1fr) 1.7fr 56px;gap:7px 14px;align-items:center;
-  box-shadow:0 6px 14px rgba(30,60,100,.06)}
-.energy .k{font-weight:800;font-size:12px}
-.energy .i{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.energy .p{font-weight:800;text-align:right;font-family:Consolas,monospace;font-size:14px}
-.bar{height:12px;border-radius:8px;background:var(--track);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
-.bar>div{height:100%;border-radius:8px;width:0;transition:width .5s;position:relative;
-  background:repeating-linear-gradient(-45deg,rgba(255,255,255,.38) 0 7px,rgba(255,255,255,0) 7px 14px),linear-gradient(var(--b1),var(--b2));
-  background-size:20px 20px,100% 100%;animation:stripes .8s linear infinite;box-shadow:inset 0 2px 0 rgba(255,255,255,.35)}
-@keyframes stripes{from{background-position:0 0,0 0}to{background-position:20px 0,0 0}}
-.b-red{--b1:#f87171;--b2:#dc2626} .b-blue{--b1:#6fb3d6;--b2:#2f7fa3} .b-green{--b1:#4ade80;--b2:#16a34a}
-.row-acts{display:flex;align-items:center;gap:10px;margin-top:12px}
-.row-acts .hint{color:var(--muted);font-size:12.5px;margin-right:auto}
-.selbar{background:var(--soft);border:1px solid var(--soft-b);border-radius:12px;margin-top:10px;padding:10px 12px}
-.selbar .r1,.selbar .r2{display:flex;align-items:center;gap:10px}
-.selbar .r2{margin-top:8px;color:var(--muted)}
-.selbar .cnt{color:var(--red);font-weight:800;margin-left:6px}
-.selbar input[type=search]{width:220px;border:1px solid var(--border);border-radius:7px;padding:5px 8px;background:var(--card)}
-.selbar select{border:1px solid var(--border);border-radius:7px;padding:4px 6px;background:var(--card)}
-.tablewrap{flex:1;min-height:120px;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:auto}
-table{width:100%;border-collapse:collapse}
-th{position:sticky;top:0;background:var(--head);text-align:left;font-size:11px;letter-spacing:.5px;color:var(--muted);font-weight:800;
-  padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;z-index:1}
-td{padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px}
-tr.sel td{background:var(--row-sel)}
-tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--red)}
-tbody tr:hover td{filter:brightness(.98)}
-.chk{width:17px;height:17px;border-radius:50%;border:2px solid #b8bec7;display:inline-block;vertical-align:middle;cursor:pointer;background:var(--card)}
-.chk.on{border-color:var(--red-d);background:radial-gradient(circle at 35% 30%,#ff8f8f,#e0262a 60%,#a51a1d);position:relative}
-.chk.on::after{content:"✓";color:#fff;font-size:11px;font-weight:900;position:absolute;left:2px;top:-2px}
-.pill{display:inline-block;border:1.5px solid var(--pc);color:var(--pc);border-radius:20px;padding:0 9px;font-size:11.5px;font-weight:700;
-  background:color-mix(in srgb,var(--pc) 7%,transparent);max-width:300px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
-.t-new{--pc:#2563eb}.t-dl{--pc:#ea580c}.t-done{--pc:#16a34a}.t-err{--pc:#dc2626}.t-skip{--pc:#8b95a3}
-.logl{color:var(--muted);font-size:12px;margin-top:10px}
-.log{height:118px;margin-top:6px;background:var(--log-bg);color:var(--log-fg);border-radius:12px;padding:8px 12px;overflow:auto;
-  font-family:Consolas,"DejaVu Sans Mono",monospace;font-size:12.3px;line-height:1.5;user-select:text;
-  box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
-.foot{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;padding-top:8px}
-.foot .fb{margin-left:auto;width:220px;height:5px;border-radius:3px;background:var(--track);overflow:hidden}
-.foot .fb div{height:100%;background:var(--red);width:0;transition:width .5s}
-.page{display:none;flex:1;flex-direction:column;min-height:0}
-.page.on{display:flex}
-.note{background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:10px 14px;margin-top:12px;color:var(--muted)}
-.kv{display:grid;grid-template-columns:200px 1fr;gap:8px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;
-  padding:14px 18px;margin-top:12px;user-select:text}
-.kv b{color:var(--muted);font-weight:700}
-.toast{position:fixed;right:20px;bottom:20px;background:#1f2937;color:#fff;padding:10px 16px;border-radius:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transform:translateY(10px);transition:.25s;max-width:440px;z-index:9;pointer-events:none}
-.toast.on{opacity:1;transform:none}
-.modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;place-items:center;z-index:8}
-.modal.on{display:grid}
-.modal .box{background:var(--card);border-radius:14px;padding:18px 22px;width:560px;max-width:90vw;box-shadow:0 20px 50px rgba(0,0,0,.3)}
-.modal ul{padding-left:20px;line-height:1.6}
-.warnbar{background:#fff4e5;border:1px solid #f8c98a;color:#92400e;border-radius:10px;padding:8px 12px;margin-top:10px;display:none;font-weight:600}
-body.dark .warnbar{background:#2a2116;border-color:#7a5520;color:#fcd34d}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <aside class="side" id="side">
@@ -177,17 +14,17 @@ body.dark .warnbar{background:#2a2116;border-color:#7a5520;color:#fcd34d}
     <span class="fold" id="fold" title="Thu gọn / mở rộng">«</span>
   </div>
   <div class="menu-l hide-mini">MENU</div>
-  <div class="nav" data-p="folders"><span class="ic">▦</span><span class="hide-mini">Thư mục phim</span><span class="led sm ok hide-mini"></span></div>
-  <div class="nav" data-p="scan"><span class="ic">⬇</span><span class="hide-mini">Quét &amp; Tải</span><span class="led sm ok hide-mini"></span></div>
-  <div class="nav" data-p="history"><span class="ic">☰</span><span class="hide-mini">Lịch sử tải</span><span class="led sm ok hide-mini"></span></div>
-  <div class="nav" data-p="settings"><span class="ic">⚙</span><span class="hide-mini">Cài đặt</span><span class="led sm ok hide-mini"></span></div>
-  <div class="card alert hide-mini" id="alert"><span class="led big ok" id="aled"></span>
+  <div class="nav" data-p="folders"><span class="ic">▦</span><span class="hide-mini">Thư mục phim</span><span class="badge hide-mini" id="bd-folders" hidden></span><span class="lk hide-mini" id="lk-folders">🔒</span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="nav" data-p="scan"><span class="ic">⬇</span><span class="hide-mini">Quét &amp; Tải</span><span class="badge hide-mini" id="bd-scan" hidden></span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="nav" data-p="history"><span class="ic">☰</span><span class="hide-mini">Lịch sử tải</span><span class="badge o hide-mini" id="bd-history" hidden></span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="nav" data-p="settings"><span class="ic">⚙</span><span class="hide-mini">Cài đặt</span><span class="lk hide-mini" id="lk-settings">🔒</span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="raised alert hide-mini" id="alert"><span class="led big ok" id="aled"><i></i></span>
     <div><b id="a1">Đang kiểm tra...</b><small id="a2"></small></div></div>
   <div class="grow"></div>
   <div class="panel hide-mini">
     <h4>BẢNG ĐÈN TRẠNG THÁI</h4>
-    <div class="legend"><span><i style="background:#22b24c"></i>Tốt</span><span><i style="background:#f5a623"></i>Đang chạy</span>
-      <span><i style="background:#e23b3b"></i>Lỗi</span><span><i style="background:#b8bec7"></i>Tắt</span></div>
+    <div class="legend"><span><i style="background:#22c55e;color:#22c55e"></i>Tốt</span><span><i style="background:#ffc81a;color:#ffc81a"></i>Đang chạy</span>
+      <span><i style="background:#f23a3a;color:#f23a3a"></i>Lỗi</span><span><i style="background:#b9c0c9;color:transparent"></i>Tắt</span></div>
     <div id="tiles"></div>
   </div>
 </aside>
@@ -197,18 +34,19 @@ body.dark .warnbar{background:#2a2116;border-color:#7a5520;color:#fcd34d}
     <div><h1 id="ptitle">Quét &amp; Tải</h1><div class="sub" id="psub"></div></div>
     <div class="acts">
       <button class="btn" id="bTheme">◐ Giao diện</button>
+      <button class="btn" id="bLock">🔒 Đã khóa</button>
+      <button class="btn" id="bUpd">⟳ Cập nhật</button>
       <button class="btn pill" id="bAuto">⏱ Tự quét: tắt</button>
     </div>
   </div>
-  <div class="warnbar" id="warn"></div>
 
-  <!-- ===== QUÉT & TẢI ===== -->
+  <!-- ===================== QUÉT & TẢI ===================== -->
   <section class="page" id="pg-scan">
     <div class="stats">
       <div class="stat" style="--c:#e2552a"><div class="l">THƯ MỤC SẼ QUÉT</div><div class="sq">■</div><div class="n" id="s-folders">0</div></div>
       <div class="stat" style="--c:#2f7fa3"><div class="l">FILE MỚI CHƯA CÓ</div><div class="sq">●</div><div class="n" id="s-new">0</div></div>
       <div class="stat" style="--c:#e2342a"><div class="l">ĐANG TẢI</div><div class="sq">⬇</div><div class="n" id="s-dl">0</div></div>
-      <div class="stat" style="--c:#2f8f4a"><div class="l">DANH SÁCH ĐÃ CÓ</div><div class="sq">✔</div><div class="n" id="s-owned">0</div></div>
+      <div class="stat" style="--c:#21964a"><div class="l">DANH SÁCH ĐÃ CÓ</div><div class="sq">✔</div><div class="n" id="s-owned">0</div></div>
     </div>
     <div class="energy">
       <div class="k" style="color:#dc2626">⬇ TẢI VỀ</div><div class="i" id="e-dl-i">—</div><div class="bar"><div class="b-red" id="e-dl"></div></div><div class="p" style="color:#dc2626" id="e-dl-p">0%</div>
@@ -218,7 +56,7 @@ body.dark .warnbar{background:#2a2116;border-color:#7a5520;color:#fcd34d}
     <div class="row-acts">
       <span class="hint">Chỉ hiện những file CHƯA có trong Danh sách đã có (thư mục chưa duyệt sẽ không tự tải).</span>
       <button class="btn" id="bScan">⌕ Quét</button>
-      <button class="btn red" id="bGo">⬇ Quét &amp; Tải</button>
+      <button class="btn red shine" id="bGo">⬇ Quét &amp; Tải</button>
       <button class="btn out" id="bStop" disabled>■ Dừng</button>
     </div>
     <div class="selbar">
@@ -228,232 +66,106 @@ body.dark .warnbar{background:#2a2116;border-color:#7a5520;color:#fcd34d}
         <span class="cnt" id="selcnt">Đã chọn: 0</span>
         <span style="margin-left:auto"></span>
         <button class="btn" id="bOwn">☑ Đánh dấu đã có</button>
-        <button class="btn red" id="bDlSel">⬇ Tải mục đã chọn</button>
+        <button class="btn red shine" id="bDlSel">⬇ Tải mục đã chọn</button>
       </div>
-      <div class="r2">⌕ Tìm <input type="search" id="q"> <span style="margin-left:14px">Hiện</span>
+      <div class="r2">⌕ Tìm <input type="search" id="q" style="width:230px"> <span style="margin-left:14px">Hiện</span>
         <select id="show"><option>Tất cả</option><option>Mới</option><option>Đang tải</option><option>Lỗi</option>
           <option>Xong</option><option>Chưa duyệt</option><option>Đã chọn</option></select></div>
     </div>
     <div class="tablewrap"><table id="tbl">
-      <thead><tr><th style="width:38px" id="hchk"><span class="chk"></span></th><th data-k="0">PHIM</th><th data-k="1">GHI CHÚ</th>
+      <thead><tr><th style="width:40px" id="hchk"><span class="chk"></span></th><th data-k="0">PHIM</th><th data-k="1">GHI CHÚ</th>
         <th data-k="2">TÊN FILE</th><th data-k="3">NGÀY UP</th><th data-k="4">DUNG LƯỢNG</th><th data-k="5">TRẠNG THÁI</th></tr></thead>
       <tbody id="rows"></tbody></table></div>
     <div class="logl">Nhật ký (bấm ô tròn để chọn, nhấp đúp để mở file / nguồn, bấm tiêu đề cột để sắp xếp)</div>
-    <div class="log" id="log"></div>
+    <div class="crt"><div class="log" id="log"></div></div>
   </section>
 
-  <!-- ===== LỊCH SỬ ===== -->
-  <section class="page" id="pg-history">
-    <div class="tablewrap" style="margin-top:14px"><table>
-      <thead><tr><th>THỜI GIAN</th><th>PHIM</th><th>TÊN FILE</th><th>DUNG LƯỢNG</th><th>TRẠNG THÁI</th></tr></thead>
-      <tbody id="hrows"></tbody></table></div>
-    <div class="note">Bản thử v3.0: tab này chỉ xem. Xóa / tải lại từ lịch sử vẫn làm trong bản v2.5.</div>
-  </section>
-
-  <!-- ===== THƯ MỤC PHIM ===== -->
+  <!-- ===================== THƯ MỤC PHIM ===================== -->
   <section class="page" id="pg-folders">
-    <div class="tablewrap" style="margin-top:14px"><table>
-      <thead><tr><th>QUÉT</th><th>THƯ MỤC PHIM</th><th>GHI CHÚ</th><th>FILE / ĐÃ CÓ</th><th>QUÉT LẦN CUỐI</th><th>ĐÍCH HDD</th><th>TRẠNG THÁI</th></tr></thead>
-      <tbody id="frows"></tbody></table></div>
-    <div class="note">Bản thử v3.0: tab này chỉ xem. Thêm / sửa / duyệt thư mục phim vẫn làm trong bản v2.5 (có mật khẩu admin).</div>
+    <div class="fold-wrap">
+      <div class="fold-left">
+        <div class="row-acts" style="margin-top:0">
+          <button class="btn red shine" id="fAdd">＋ Thêm thư mục</button>
+          <button class="btn" id="fBulk">⧉ Dán nhiều nguồn</button>
+          <button class="btn" id="fMore">⋯ Khác</button>
+          <span class="cnt" id="fCount" style="color:var(--muted);font-weight:600"></span>
+        </div>
+        <div class="row-acts" style="margin-top:8px">⌕ Tìm <input type="search" id="fq" style="flex:1"></div>
+        <div class="cards" id="cards"></div>
+      </div>
+      <div class="fold-right">
+        <div class="fp-head"><h3 id="fpTitle">Danh sách file</h3><div class="info" id="fpInfo"></div></div>
+        <div class="selbar">
+          <div class="r1">
+            <button class="btn sm" id="fpAll">☑ Chọn tất cả</button>
+            <button class="btn sm" id="fpNone">☐ Bỏ chọn</button>
+            <button class="btn sm" id="fpUntil">↧ Chọn từ đầu đến dòng đang bấm</button>
+          </div>
+          <div class="r2">⌕ Tìm <input type="search" id="fpq" style="width:200px"> <span style="margin-left:12px">Hiện</span>
+            <select id="fpShow"><option>Tất cả</option><option>Chưa có</option><option>Đã có</option><option>Đang chọn</option></select></div>
+        </div>
+        <div class="tablewrap"><table>
+          <thead><tr><th style="width:40px" id="fpH"><span class="chk"></span></th><th>TÊN FILE</th><th>NGÀY UP</th><th>DUNG LƯỢNG</th><th>TRẠNG THÁI</th></tr></thead>
+          <tbody id="fpRows"></tbody></table>
+          <div class="empty" id="fpEmpty">Bấm "⌕ Quét file" ở một thư mục bên trái<br>để xem tất cả file của thư mục đó.</div></div>
+        <div class="row-acts">
+          <button class="btn red" id="fpMark" disabled>☑ Thêm vào Danh sách đã có</button>
+          <button class="btn" id="fpUnmark" disabled>↺ Bỏ khỏi Danh sách đã có</button>
+          <span class="cnt" id="fpCount" style="color:var(--muted);font-weight:600"></span>
+          <span style="margin-left:auto"></span>
+          <button class="btn green" id="fpSave" disabled>✓ Lưu</button>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <!-- ===== CÀI ĐẶT ===== -->
-  <section class="page" id="pg-settings">
-    <div class="kv" id="kv"></div>
-    <div class="row-acts" style="justify-content:flex-start">
-      <button class="btn" id="bPk">↻ Kiểm tra kết nối PikPak</button>
-      <button class="btn" id="bBk">⟲ Sao lưu lên PikPak ngay</button>
-      <button class="btn" id="bData">📂 Mở thư mục Data</button>
+  <!-- ===================== LỊCH SỬ ===================== -->
+  <section class="page" id="pg-history">
+    <div class="row-acts" style="margin-top:14px">
+      <button class="btn" id="hDone">✔ Đánh dấu Xong</button>
+      <button class="btn" id="hUp">☁ Lưu lại vào My PikPak</button>
+      <button class="btn" id="hRep">⧉ Copy báo cáo lỗi mới nhất</button>
+      <button class="btn" id="hRepDir">▸ Thư mục báo cáo</button>
+      <button class="btn" id="hDel">↺ Xóa mục chọn (để tải lại)</button>
+      <button class="btn out" id="hClear">✕ Xóa toàn bộ</button>
+      <span class="cnt" id="hCount" style="margin-left:auto;color:var(--muted);font-weight:600"></span>
     </div>
-    <div class="note">Bản thử v3.0: tab này chỉ xem. Đổi tài khoản, đường dẫn, mật khẩu admin... vẫn làm trong bản v2.5.</div>
+    <div class="row-acts">⌕ Tìm <input type="search" id="hq" style="width:260px"> <span style="margin-left:12px">Trạng thái</span>
+      <select id="hShow"><option>Tất cả</option><option>Đang tải</option><option>Xong</option><option>Lỗi</option><option>Hôm nay</option><option>Lỗi upload</option></select>
+      <span class="cnt" id="hSel"></span></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th style="width:40px" id="hH"><span class="chk"></span></th><th data-h="folder">THƯ MỤC</th><th data-h="name">TÊN FILE</th>
+        <th data-h="ts" class="sorted">THỜI GIAN</th><th data-h="raw">TRẠNG THÁI</th><th data-h="pikpak">PIKPAK</th></tr></thead>
+      <tbody id="hRows"></tbody></table></div>
+    <div class="logl">Bấm ô tròn để chọn · nhấp đúp 1 tập đã tải xong để mở thư mục chứa file.</div>
+  </section>
+
+  <!-- ===================== CÀI ĐẶT ===================== -->
+  <section class="page" id="pg-settings">
+    <div><div class="seg" id="seg">
+      <div data-s="gen" class="on">⚙ Chung</div><div data-s="pikpak">☁ My PikPak</div><div data-s="rclone">⇄ rclone</div><div data-s="machine">⌂ Máy này &amp; Sao lưu</div>
+    </div></div>
+    <div class="sets" id="sets"></div>
+    <div class="savebar" id="savebar">
+      <button class="btn green" id="sSave">✓ Lưu cài đặt</button>
+      <button class="btn" id="sTest">◉ Thử thông báo</button>
+      <span class="dirty">● Có thay đổi chưa lưu</span>
+    </div>
+  </section>
+
+  <!-- ===================== KHÓA ===================== -->
+  <section class="page" id="pg-locked">
+    <div class="lockpage"><div class="raised">
+      <div class="big">🔒</div><h3 id="lkTitle">Tab này đang khóa</h3>
+      <p style="color:var(--muted)">Tab Thư mục phim và Cài đặt cần mật khẩu admin (tránh bấm nhầm).</p>
+      <button class="btn red shine" id="lkOpen">🔑 Nhập mật khẩu admin</button>
+    </div></div>
   </section>
 
   <div class="foot"><span id="status">Sẵn sàng.</span><div class="fb"><div id="fb"></div></div></div>
 </main>
 
 <div class="toast" id="toast"></div>
-<div class="modal" id="modal"><div class="box"><h3 style="margin-top:0">Các mục cần xử lý</h3><ul id="mlist"></ul>
-  <div style="text-align:right"><button class="btn" onclick="modal.classList.remove('on')">Đóng</button></div></div></div>
-
-<script>
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function api(name, ...args){
-  if (window.pywebview && window.pywebview.api && window.pywebview.api[name]) return window.pywebview.api[name](...args);
-  return fetch("/api/" + name, {method:"POST", body:JSON.stringify(args)}).then(r => r.json());
-}
-function toast(t){ const e=$("toast"); e.textContent=t; e.classList.add("on"); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove("on"),3500); }
-window.toast = toast;
-const modal = $("modal");
-
-/* ---------- điều hướng */
-const PAGES = {scan:["Quét & Tải","Tìm tập mới chưa có trong Danh sách đã có → Save vào My PikPak → rclone tải về HDD"],
-  folders:["Thư mục phim","Các thư mục trong link chia sẻ PikPak mà tool theo dõi"],
-  history:["Lịch sử tải","Các tập đã Save vào My PikPak và tải về HDD"],
-  settings:["Cài đặt","Tài khoản PikPak, rclone, sao lưu, COPY_TO_IPHONE"]};
-let page = "scan";
-function go(p){
-  page = p;
-  document.querySelectorAll(".nav").forEach(n => n.classList.toggle("on", n.dataset.p === p));
-  document.querySelectorAll(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + p));
-  $("ptitle").textContent = PAGES[p][0]; $("psub").textContent = PAGES[p][1];
-  if (p === "folders") api("folders").then(renderFolders);
-  if (p === "settings") api("settings").then(renderSettings);
-  api("ui_set", "page", p);
-}
-document.querySelectorAll(".nav").forEach(n => n.onclick = () => go(n.dataset.p));
-$("fold").onclick = () => { $("side").classList.toggle("mini"); $("fold").textContent = $("side").classList.contains("mini") ? "»" : "«"; };
-$("bTheme").onclick = () => { document.body.classList.toggle("dark"); api("ui_set", "dark", document.body.classList.contains("dark")); };
-
-/* ---------- bảng đèn */
-const TILES = [["pk","PikPak"],["rc","rclone"],["auto","Tự quét"],["dl","Đang tải"],["bk","Sao lưu"],["err","Lỗi"]];
-$("tiles").innerHTML = TILES.map(([k,t]) => `<div class="card tile" id="t-${k}"><span class="led off"></span><div><b>${t}</b><small class="s-off">...</small></div>` +
-  (k === "auto" ? `<span class="auto-pick" onclick="event.stopPropagation()">mỗi <select id="aint">${[15,30,45,60,90,120].map(v=>`<option>${v}</option>`).join("")}</select> phút</span>`
-                : `<span class="chev">›</span>`) + `</div>`).join("");
-let S = {auto:{on:false,interval:60}};
-$("t-pk").onclick = () => { api("check_pikpak"); toast("Đang kiểm tra lại kết nối PikPak..."); };
-$("t-rc").onclick = () => toast("rclone: tải / đổi trong Cài đặt của bản v2.5.");
-$("t-auto").onclick = () => setAuto(!S.auto.on);
-$("t-dl").onclick = () => go("scan");
-$("t-bk").onclick = () => api("backup_now").then(m => toast(m || "Đang sao lưu lên PikPak..."));
-$("t-err").onclick = () => api("open_report").then(t => {
-  if (!t) return toast("Chưa có báo cáo lỗi nào.");
-  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(
-    () => toast("Đã mở và copy báo cáo lỗi mới nhất - dán (Ctrl+V) vào Claude để sửa."),
-    () => toast("Đã mở báo cáo lỗi mới nhất."));
-});
-$("aint").onchange = () => setAuto(S.auto.on, +$("aint").value);
-$("bAuto").onclick = () => setAuto(!S.auto.on);
-function setAuto(on, minutes){ api("set_auto", on, minutes || +$("aint").value).then(()=>toast(on ? "Đã bật tự quét." : "Đã tắt tự quét.")); }
-$("alert").onclick = () => {
-  const iss = S.issues || [];
-  $("mlist").innerHTML = iss.length ? iss.map(x => `<li>${esc(x)}</li>`).join("") : "<li>Mọi thứ đều ổn - tool sẵn sàng tự quét &amp; tải.</li>";
-  modal.classList.add("on");
-};
-function setLed(el, st){ el.className = el.className.replace(/\b(ok|run|err|off|amb)\b/g, "").trim() + " " + st; }
-
-/* ---------- bảng file */
-let rows = [], rowsVer = -1, logSeq = 0, histVer = -1, checked = new Set(), seen = new Set(), sortK = null, sortDir = 1;
-function cleanStatus(r){
-  let s = String(r.v[5] || "").replace(/[▰▱]/g, "").replace(/\s+/g, " ").trim();
-  if (r.tag === "dl"){ const m = s.match(/(\d+)%\s*(.*)$/); if (m) s = `⬇ Đang tải ${m[1]}%` + (m[2] ? " · " + m[2].replace(".", ",") : ""); }
-  if (/^●\s*Mới/.test(s)) s = "● Tập mới";
-  return s;
-}
-function visible(r){
-  const q = $("q").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  if (q && !r.v.join(" ").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q)) return false;
-  const sh = $("show").value;
-  return {"Tất cả":true, "Mới":r.tag==="new", "Đang tải":r.tag==="dl", "Lỗi":r.tag==="err", "Xong":r.tag==="done",
-          "Chưa duyệt":r.tag==="skip", "Đã chọn":checked.has(r.code)}[sh] ?? true;
-}
-function renderRows(){
-  let list = rows.filter(visible);
-  if (sortK !== null) list = list.slice().sort((a,b) => String(a.v[sortK]).localeCompare(String(b.v[sortK]), "vi", {numeric:true}) * sortDir);
-  $("rows").innerHTML = list.map(r => `<tr class="${checked.has(r.code) ? "sel" : ""}" data-c="${esc(r.code)}">
-    <td><span class="chk ${checked.has(r.code) ? "on" : ""}"></span></td><td title="${esc(r.v[0])}">${esc(r.v[0])}</td><td>${esc(r.v[1])}</td>
-    <td title="${esc(r.v[2])}">${esc(r.v[2])}</td><td>${esc(r.v[3])}</td><td>${esc(r.v[4])}</td>
-    <td><span class="pill t-${r.tag}" title="${esc(r.v[5])}">${esc(cleanStatus(r))}</span></td></tr>`).join("");
-  $("selcnt").textContent = "Đã chọn: " + rows.filter(r => checked.has(r.code)).length;
-}
-$("rows").onclick = e => { const tr = e.target.closest("tr"); if (!tr) return; const c = tr.dataset.c;
-  checked.has(c) ? checked.delete(c) : checked.add(c); renderRows(); };
-$("rows").ondblclick = e => { const tr = e.target.closest("tr"); if (tr) api("open_source", tr.dataset.c); };
-document.querySelectorAll("#tbl th[data-k]").forEach(th => th.onclick = () => {
-  const k = +th.dataset.k; sortDir = sortK === k ? -sortDir : 1; sortK = k; renderRows(); });
-$("hchk").onclick = () => { const vis = rows.filter(visible); const all = vis.every(r => checked.has(r.code));
-  vis.forEach(r => all ? checked.delete(r.code) : checked.add(r.code)); renderRows(); };
-$("bAll").onclick = () => { rows.filter(visible).forEach(r => checked.add(r.code)); renderRows(); };
-$("bNone").onclick = () => { checked.clear(); renderRows(); };
-$("q").oninput = renderRows; $("show").onchange = renderRows;
-const sel = () => rows.filter(r => checked.has(r.code)).map(r => r.code);
-$("bScan").onclick = () => api("scan", false).then(m => m && toast(m));
-$("bGo").onclick = () => api("scan", true).then(m => m && toast(m));
-$("bStop").onclick = () => api("stop");
-$("bDlSel").onclick = () => { const c = sel(); if (!c.length) return toast("Chưa chọn dòng nào."); api("download", c).then(m => m && toast(m)); };
-$("bOwn").onclick = () => { const c = sel(); if (!c.length) return toast("Chưa chọn dòng nào.");
-  api("mark_owned", c).then(() => { c.forEach(x => checked.delete(x)); toast(`Đã thêm ${c.length} file vào Danh sách đã có.`); }); };
-
-/* ---------- các tab chỉ xem */
-const ST_TAG = s => /Xong|Đã tải xong/.test(s) ? "done" : /Lỗi/.test(s) ? "err" : /Đang/.test(s) ? "dl" : "skip";
-function renderHistory(h){
-  $("hrows").innerHTML = h.map(r => `<tr title="${esc(r.error || r.path)}"><td>${esc(r.when)}</td><td>${esc(r.movie)}</td><td>${esc(r.name)}</td>
-    <td>${esc(r.size)}</td><td><span class="pill t-${ST_TAG(r.status)}">${esc(r.status)}</span></td></tr>`).join("") ||
-    `<tr><td colspan="5" style="color:var(--muted)">Chưa có lịch sử.</td></tr>`;
-}
-function renderFolders(f){
-  $("frows").innerHTML = f.map(x => `<tr title="${esc(x.err)}"><td><span class="chk ${x.on ? "on" : ""}" style="cursor:default"></span></td>
-    <td>${esc(x.name)}</td><td>${esc(x.note)}</td><td>${esc(x.total)} / ${esc(x.owned)}</td><td>${esc(x.last)}</td><td title="${esc(x.hdd)}">${esc(x.hdd)}</td>
-    <td>${x.err ? `<span class="pill t-err">⚠ ${esc(x.err)}</span>` : x.reviewed ? `<span class="pill t-done">✔ Đã duyệt</span>` : `<span class="pill t-skip">◔ Chưa duyệt</span>`}</td></tr>`).join("");
-}
-function renderSettings(s){
-  const rowsKV = [["Tài khoản PikPak", s.user || "(chưa lưu)"], ["rclone", s.rclone], ["Link chia sẻ gốc", s.share_root],
-    ["Copy vào COPY_TO_IPHONE", (s.iphone_on ? "Bật · " : "Tắt · ") + s.iphone_dir], ["Sao lưu lên PikPak", (s.backup_on ? "Bật" : "Tắt") + (s.last_backup ? " · lần gần nhất " + s.last_backup : "")],
-    ["Giới hạn tốc độ", s.bwlimit || "không"], ["Đuôi file", s.extensions], ["Thư mục dữ liệu", s.data]];
-  $("kv").innerHTML = rowsKV.map(([k,v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join("");
-}
-$("bPk").onclick = () => { api("check_pikpak"); toast("Đang kiểm tra lại kết nối PikPak..."); };
-$("bBk").onclick = () => api("backup_now").then(m => toast(m || "Đang sao lưu lên PikPak..."));
-$("bData").onclick = () => api("open_data");
-
-/* ---------- vòng cập nhật trạng thái */
-function setBar(k, e){ $("e-"+k).style.width = e[0] + "%"; $("e-"+k+"-p").textContent = e[0] + "%"; $("e-"+k+"-i").textContent = e[1]; $("e-"+k+"-i").title = e[1]; }
-async function tick(){
-  try{
-    const s = await api("state", rowsVer, logSeq, histVer);
-    S = s;
-    $("ver").textContent = s.version;
-    $("s-folders").textContent = s.stats.folders; $("s-new").textContent = s.stats.new;
-    $("s-dl").textContent = s.stats.dl; $("s-owned").textContent = s.stats.owned.toLocaleString("vi-VN");
-    setBar("dl", s.energy.dl); setBar("up", s.energy.up); setBar("all", s.energy.all);
-    $("fb").style.width = s.energy.all[0] + "%";
-    $("status").textContent = s.status;
-    ["bScan","bGo","bDlSel","bOwn"].forEach(b => $(b).disabled = s.busy); $("bStop").disabled = !s.busy;
-    for (const [k, [st, txt]] of Object.entries(s.leds)){
-      const t = $("t-"+k); if (!t) continue;
-      setLed(t.querySelector(".led"), k === "dl" && st === "run" ? "run" : st);
-      const sm = t.querySelector("small"); sm.textContent = txt; sm.className = "s-" + st;
-      t.classList.toggle("err", st === "err");
-    }
-    const n = s.issues.length, overall = n ? "err" : (s.busy ? "run" : "ok");
-    setLed($("aled"), n ? "err" : "ok");
-    $("a1").textContent = n ? `Có ${n} mục cần xử lý` : "Mọi thứ hoạt động tốt";
-    $("a2").textContent = n ? "Tool chưa tự tải được cho tới khi sửa · bấm để xem" : `Thư viện: ${s.lib.toLocaleString("vi-VN")} tập · Máy: ${s.machine}`;
-    document.querySelectorAll(".nav .led").forEach(l => setLed(l, overall));
-    S.auto = s.auto;
-    if (document.activeElement !== $("aint")) $("aint").value = String(s.auto.interval);
-    $("bAuto").textContent = s.auto.on ? `⏱ Tự quét: ${s.auto.interval} phút` + (s.auto.next ? ` · ${s.auto.next}` : "") : "⏱ Tự quét: tắt";
-    const w = (s.issues || []).find(x => x.startsWith("Bản v2.5"));
-    $("warn").style.display = w ? "block" : "none"; $("warn").textContent = w ? "⚠ " + w : "";
-    if (s.rows){
-      rowsVer = s.rows_ver; rows = s.rows;
-      const codes = new Set(rows.map(r => r.code));
-      for (const r of rows) if (!seen.has(r.code)){ seen.add(r.code); if (r.tag === "new") checked.add(r.code); }
-      for (const c of [...checked]) if (!codes.has(c)) checked.delete(c);
-      renderRows();
-    }
-    if (s.history){ histVer = s.hist_ver; renderHistory(s.history); }
-    if (s.log.length){
-      const L = $("log"), atEnd = L.scrollTop + L.clientHeight >= L.scrollHeight - 30;
-      L.insertAdjacentHTML("beforeend", s.log.map(x => `<div>[${esc(x.slice(0,8))}] ${esc(x.slice(10))}</div>`).join(""));
-      while (L.childElementCount > 400) L.firstChild.remove();
-      if (atEnd) L.scrollTop = L.scrollHeight;
-    }
-    logSeq = s.log_seq;
-  } catch(e){ $("status").textContent = "Lỗi giao diện: " + e; }
-  setTimeout(tick, 500);
-}
-let started = false;
-async function start(){
-  if (started) return; started = true;
-  try{ if (await api("ui_get", "dark", false)) document.body.classList.add("dark");
-       go((await api("ui_get", "page", "scan")) || "scan"); } catch(e){ go("scan"); }
-  tick();
-}
-window.addEventListener("pywebviewready", start);
-if (location.protocol.startsWith("http")) start();
-else setTimeout(() => { if (window.pywebview) start(); }, 1500);
-</script>
+<script src="app.js"></script>
 </body>
 </html>
