@@ -2,7 +2,7 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 echo === Cai thu vien Python ===
-python -m pip install --upgrade requests pystray pillow
+python -m pip install --upgrade requests pystray pillow pywebview
 echo.
 echo === rclone.exe (de tai tu My PikPak ve HDD) - luon nam cung thu muc tool ===
 if exist "rclone.exe" (

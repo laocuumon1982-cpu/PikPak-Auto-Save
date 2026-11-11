@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PikPak Auto Save</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside class="side" id="side">
+  <div class="brand">
+    <div class="logo">P</div>
+    <div class="hide-mini"><b>PIKPAK AUTO SAVE</b><small id="ver">v3.0</small></div>
+    <span class="fold" id="fold" title="Thu gọn / mở rộng">«</span>
+  </div>
+  <div class="menu-l hide-mini">MENU</div>
+  <div class="nav" data-p="folders"><span class="ic">▦</span><span class="hide-mini">Thư mục phim</span><span class="badge hide-mini" id="bd-folders" hidden></span><span class="lk hide-mini" id="lk-folders">🔒</span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="nav" data-p="scan"><span class="ic">⬇</span><span class="hide-mini">Quét &amp; Tải</span><span class="badge hide-mini" id="bd-scan" hidden></span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="nav" data-p="history"><span class="ic">☰</span><span class="hide-mini">Lịch sử tải</span><span class="badge o hide-mini" id="bd-history" hidden></span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="nav" data-p="settings"><span class="ic">⚙</span><span class="hide-mini">Cài đặt</span><span class="lk hide-mini" id="lk-settings">🔒</span><span class="led sm ok hide-mini"><i></i></span></div>
+  <div class="raised alert hide-mini" id="alert"><span class="led big ok" id="aled"><i></i></span>
+    <div><b id="a1">Đang kiểm tra...</b><small id="a2"></small></div></div>
+  <div class="grow"></div>
+  <div class="panel hide-mini">
+    <h4>BẢNG ĐÈN TRẠNG THÁI</h4>
+    <div class="legend"><span><i style="background:#22c55e;color:#22c55e"></i>Tốt</span><span><i style="background:#ffc81a;color:#ffc81a"></i>Đang chạy</span>
+      <span><i style="background:#f23a3a;color:#f23a3a"></i>Lỗi</span><span><i style="background:#b9c0c9;color:transparent"></i>Tắt</span></div>
+    <div id="tiles"></div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="top">
+    <div><h1 id="ptitle">Quét &amp; Tải</h1><div class="sub" id="psub"></div></div>
+    <div class="acts">
+      <button class="btn" id="bTheme">◐ Giao diện</button>
+      <button class="btn" id="bLock">🔒 Đã khóa</button>
+      <button class="btn" id="bUpd">⟳ Cập nhật</button>
+      <button class="btn pill" id="bAuto">⏱ Tự quét: tắt</button>
+    </div>
+  </div>
+
+  <!-- ===================== QUÉT & TẢI ===================== -->
+  <section class="page" id="pg-scan">
+    <div class="stats">
+      <div class="stat" style="--c:#e2552a"><div class="l">THƯ MỤC SẼ QUÉT</div><div class="sq">■</div><div class="n" id="s-folders">0</div></div>
+      <div class="stat" style="--c:#2f7fa3"><div class="l">FILE MỚI CHƯA CÓ</div><div class="sq">●</div><div class="n" id="s-new">0</div></div>
+      <div class="stat" style="--c:#e2342a"><div class="l">ĐANG TẢI</div><div class="sq">⬇</div><div class="n" id="s-dl">0</div></div>
+      <div class="stat" style="--c:#21964a"><div class="l">DANH SÁCH ĐÃ CÓ</div><div class="sq">✔</div><div class="n" id="s-owned">0</div></div>
+    </div>
+    <div class="energy">
+      <div class="k" style="color:#dc2626">⬇ TẢI VỀ</div><div class="i" id="e-dl-i">—</div><div class="bar"><div class="b-red" id="e-dl"></div></div><div class="p" style="color:#dc2626" id="e-dl-p">0%</div>
+      <div class="k" style="color:#2f7fa3">☁ MY PIKPAK</div><div class="i" id="e-up-i">—</div><div class="bar"><div class="b-blue" id="e-up"></div></div><div class="p" style="color:#2f7fa3" id="e-up-p">0%</div>
+      <div class="k" style="color:#16a34a">Σ TỔNG ĐỢT</div><div class="i" id="e-all-i">—</div><div class="bar"><div class="b-green" id="e-all"></div></div><div class="p" style="color:#16a34a" id="e-all-p">0%</div>
+    </div>
+    <div class="row-acts">
+      <span class="hint">Chỉ hiện những file CHƯA có trong Danh sách đã có (thư mục chưa duyệt sẽ không tự tải).</span>
+      <button class="btn" id="bScan">⌕ Quét</button>
+      <button class="btn red shine" id="bGo">⬇ Quét &amp; Tải</button>
+      <button class="btn out" id="bStop" disabled>■ Dừng</button>
+    </div>
+    <div class="selbar">
+      <div class="r1">
+        <button class="btn" id="bAll">☑ Chọn tất cả</button>
+        <button class="btn" id="bNone">☐ Bỏ chọn</button>
+        <span class="cnt" id="selcnt">Đã chọn: 0</span>
+        <span style="margin-left:auto"></span>
+        <button class="btn" id="bOwn">☑ Đánh dấu đã có</button>
+        <button class="btn red shine" id="bDlSel">⬇ Tải mục đã chọn</button>
+      </div>
+      <div class="r2">⌕ Tìm <input type="search" id="q" style="width:230px"> <span style="margin-left:14px">Hiện</span>
+        <select id="show"><option>Tất cả</option><option>Mới</option><option>Đang tải</option><option>Lỗi</option>
+          <option>Xong</option><option>Chưa duyệt</option><option>Đã chọn</option></select></div>
+    </div>
+    <div class="tablewrap"><table id="tbl">
+      <thead><tr><th style="width:40px" id="hchk"><span class="chk"></span></th><th data-k="0">PHIM</th><th data-k="1">GHI CHÚ</th>
+        <th data-k="2">TÊN FILE</th><th data-k="3">NGÀY UP</th><th data-k="4">DUNG LƯỢNG</th><th data-k="5">TRẠNG THÁI</th></tr></thead>
+      <tbody id="rows"></tbody></table></div>
+    <div class="logl">Nhật ký (bấm ô tròn để chọn, nhấp đúp để mở file / nguồn, bấm tiêu đề cột để sắp xếp)</div>
+    <div class="crt"><div class="log" id="log"></div></div>
+  </section>
+
+  <!-- ===================== THƯ MỤC PHIM ===================== -->
+  <section class="page" id="pg-folders">
+    <div class="fold-wrap">
+      <div class="fold-left">
+        <div class="row-acts" style="margin-top:0">
+          <button class="btn red shine" id="fAdd">＋ Thêm thư mục</button>
+          <button class="btn" id="fBulk">⧉ Dán nhiều nguồn</button>
+          <button class="btn" id="fMore">⋯ Khác</button>
+          <span class="cnt" id="fCount" style="color:var(--muted);font-weight:600"></span>
+        </div>
+        <div class="row-acts" style="margin-top:8px">⌕ Tìm <input type="search" id="fq" style="flex:1"></div>
+        <div class="cards" id="cards"></div>
+      </div>
+      <div class="fold-right">
+        <div class="fp-head"><h3 id="fpTitle">Danh sách file</h3><div class="info" id="fpInfo"></div></div>
+        <div class="selbar">
+          <div class="r1">
+            <button class="btn sm" id="fpAll">☑ Chọn tất cả</button>
+            <button class="btn sm" id="fpNone">☐ Bỏ chọn</button>
+            <button class="btn sm" id="fpUntil">↧ Chọn từ đầu đến dòng đang bấm</button>
+          </div>
+          <div class="r2">⌕ Tìm <input type="search" id="fpq" style="width:200px"> <span style="margin-left:12px">Hiện</span>
+            <select id="fpShow"><option>Tất cả</option><option>Chưa có</option><option>Đã có</option><option>Đang chọn</option></select></div>
+        </div>
+        <div class="tablewrap"><table>
+          <thead><tr><th style="width:40px" id="fpH"><span class="chk"></span></th><th>TÊN FILE</th><th>NGÀY UP</th><th>DUNG LƯỢNG</th><th>TRẠNG THÁI</th></tr></thead>
+          <tbody id="fpRows"></tbody></table>
+          <div class="empty" id="fpEmpty">Bấm "⌕ Quét file" ở một thư mục bên trái<br>để xem tất cả file của thư mục đó.</div></div>
+        <div class="row-acts">
+          <button class="btn red" id="fpMark" disabled>☑ Thêm vào Danh sách đã có</button>
+          <button class="btn" id="fpUnmark" disabled>↺ Bỏ khỏi Danh sách đã có</button>
+          <span class="cnt" id="fpCount" style="color:var(--muted);font-weight:600"></span>
+          <span style="margin-left:auto"></span>
+          <button class="btn green" id="fpSave" disabled>✓ Lưu</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LỊCH SỬ ===================== -->
+  <section class="page" id="pg-history">
+    <div class="row-acts" style="margin-top:14px">
+      <button class="btn" id="hDone">✔ Đánh dấu Xong</button>
+      <button class="btn" id="hUp">☁ Lưu lại vào My PikPak</button>
+      <button class="btn" id="hRep">⧉ Copy báo cáo lỗi mới nhất</button>
+      <button class="btn" id="hRepDir">▸ Thư mục báo cáo</button>
+      <button class="btn" id="hDel">↺ Xóa mục chọn (để tải lại)</button>
+      <button class="btn out" id="hClear">✕ Xóa toàn bộ</button>
+      <span class="cnt" id="hCount" style="margin-left:auto;color:var(--muted);font-weight:600"></span>
+    </div>
+    <div class="row-acts">⌕ Tìm <input type="search" id="hq" style="width:260px"> <span style="margin-left:12px">Trạng thái</span>
+      <select id="hShow"><option>Tất cả</option><option>Đang tải</option><option>Xong</option><option>Lỗi</option><option>Hôm nay</option><option>Lỗi upload</option></select>
+      <span class="cnt" id="hSel"></span></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th style="width:40px" id="hH"><span class="chk"></span></th><th data-h="folder">THƯ MỤC</th><th data-h="name">TÊN FILE</th>
+        <th data-h="ts" class="sorted">THỜI GIAN</th><th data-h="raw">TRẠNG THÁI</th><th data-h="pikpak">PIKPAK</th></tr></thead>
+      <tbody id="hRows"></tbody></table></div>
+    <div class="logl">Bấm ô tròn để chọn · nhấp đúp 1 tập đã tải xong để mở thư mục chứa file.</div>
+  </section>
+
+  <!-- ===================== CÀI ĐẶT ===================== -->
+  <section class="page" id="pg-settings">
+    <div><div class="seg" id="seg">
+      <div data-s="gen" class="on">⚙ Chung</div><div data-s="pikpak">☁ My PikPak</div><div data-s="rclone">⇄ rclone</div><div data-s="machine">⌂ Máy này &amp; Sao lưu</div>
+    </div></div>
+    <div class="sets" id="sets"></div>
+    <div class="savebar" id="savebar">
+      <button class="btn green" id="sSave">✓ Lưu cài đặt</button>
+      <button class="btn" id="sTest">◉ Thử thông báo</button>
+      <span class="dirty">● Có thay đổi chưa lưu</span>
+    </div>
+  </section>
+
+  <!-- ===================== KHÓA ===================== -->
+  <section class="page" id="pg-locked">
+    <div class="lockpage"><div class="raised">
+      <div class="big">🔒</div><h3 id="lkTitle">Tab này đang khóa</h3>
+      <p style="color:var(--muted)">Tab Thư mục phim và Cài đặt cần mật khẩu admin (tránh bấm nhầm).</p>
+      <button class="btn red shine" id="lkOpen">🔑 Nhập mật khẩu admin</button>
+    </div></div>
+  </section>
+
+  <div class="foot"><span id="status">Sẵn sàng.</span><div class="fb"><div id="fb"></div></div></div>
+</main>
+
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v2.5 by Duy Anh
+PikPak Auto Save v3.0 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -43,7 +43,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v2.5 by Duy Anh"
+APP_VERSION = "v3.0 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -2005,6 +2005,9 @@ class App(tk.Tk):
         self.after(1600, self._show_err_badge)
         if self._new_machine:
             self.after(900, self._new_machine_dialog)
+        if WEB_FAIL or (sys.modules.get("auto_download_pikpak_share") and
+                        getattr(sys.modules["auto_download_pikpak_share"], "WEB_FAIL", "")):
+            self.after(1200, lambda: self.log("⚠ " + (WEB_FAIL or sys.modules["auto_download_pikpak_share"].WEB_FAIL)))
 
     # ================================================================ DANH SÁCH ĐÃ CÓ
     def _migrate_owned(self):
@@ -5057,6 +5060,12 @@ class App(tk.Tk):
         self.quit_app(force=True)
         return True
 
+    def switch_web_ui(self):
+        old = self.cfg.get("ui_mode")
+        self.cfg["ui_mode"] = "web"
+        if not self._restart_ui("Chuyển sang giao diện web (v3: nút nổi 3D, đèn LED)?"):
+            self.cfg["ui_mode"] = old
+
     def switch_theme(self, name):
         if name not in THEMES or name == self.layout:
             return
@@ -6884,6 +6893,10 @@ class App(tk.Tk):
                                "giao diện 2 nhưng thanh tải là dải liền, trạng thái hiện thành nhãn có viền màu.")
         self._theme_box = g.frame()
         self._fill_theme_box(self._theme_box)
+        fr_w = g.frame()
+        ttk.Button(fr_w, text="🌐  Dùng giao diện web (v3 - nút 3D, đèn LED)", style="Accent.TButton",
+                   command=self.switch_web_ui).pack(side="left")
+        ttk.Label(fr_w, text="Tool khởi động lại bằng giao diện web.", style="Muted.TLabel").pack(side="left", padx=8)
         g.section("Mật khẩu admin", "Tab Thư mục phim và Cài đặt cần mật khẩu admin mới mở được (tránh bấm nhầm). "
                                     "Quên mật khẩu: tắt tool, mở Data\\config.json xóa 2 dòng \"admin_hash\" và "
                                     "\"admin_salt\" rồi mở lại tool để tạo mật khẩu mới.")
@@ -8601,6 +8614,41 @@ class App(tk.Tk):
         except Exception:
             pass
 
+WEB_FAIL = ""        # lý do không mở được giao diện web (hiện trong nhật ký giao diện cũ)
+
+
+def start_web_ui():
+    """v3.0: mở giao diện web (pywebview / Edge WebView2). Trả về False -> dùng giao diện Tk (dự phòng):
+    chọn "giao diện cũ", chạy --classic, máy thiếu pywebview / WebView2, hoặc thiếu thư mục web."""
+    if "--classic" in sys.argv:
+        return False
+    if "--web" not in sys.argv:
+        try:
+            if (load_json(CONFIG_FILE, {}) or {}).get("ui_mode") == "classic":
+                return False
+        except Exception:
+            pass
+    import types
+    me = sys.modules.get(__name__)
+    if me is None or getattr(me, "App", None) is not App:      # chạy qua run_newer_script (exec)
+        me = types.ModuleType("auto_download_pikpak_share")
+        me.__dict__.update(globals())
+    sys.modules["auto_download_pikpak_share"] = me
+    if (BASE / "pikpak_web.py").is_file() and str(BASE) not in sys.path:
+        sys.path.insert(0, str(BASE))
+    try:
+        import pikpak_web
+        return bool(pikpak_web.run_web(sys.argv))
+    except Exception as e:
+        globals()["WEB_FAIL"] = f"Không mở được giao diện web: {e!r} - đang dùng giao diện cũ."
+        try:
+            with open(LOG_FILE, "a", encoding="utf-8") as fh:
+                fh.write(f"{dt.datetime.now():%Y-%m-%d %H:%M:%S}  Không mở được giao diện web: {e!r} - dùng giao diện cũ\n")
+        except OSError:
+            pass
+        return False
+
+
 if __name__ == "__main__":
     if os.name == "nt":
         try:
@@ -8613,4 +8661,5 @@ if __name__ == "__main__":
         time.sleep(2.5)           # chờ bản cũ thoát hẳn
     migrate_exe_name()
     if not run_newer_script():
-        App(auto="--auto" in sys.argv, startup="--startup" in sys.argv).mainloop()
+        if not start_web_ui():
+            App(auto="--auto" in sys.argv, startup="--startup" in sys.argv).mainloop()

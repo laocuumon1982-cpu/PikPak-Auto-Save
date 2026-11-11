@@ -42,20 +42,48 @@ jobs:
           python-version: "3.12"
       - name: Cai thu vien
         if: env.SKIP == '0'
-        run: python -m pip install requests pystray pillow pyinstaller
+        run: python -m pip install requests pystray pillow pywebview pyinstaller
       - name: Dong goi exe
         if: env.SKIP == '0'
-        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save" --icon icon.ico --add-data "icon.ico;." --hidden-import pystray._win32 auto_download_pikpak_share.py
+        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save" --icon icon.ico --add-data "icon.ico;." --add-data "web;web" --hidden-import pikpak_web --collect-all webview --collect-all pythonnet --collect-all clr_loader --hidden-import pystray._win32 auto_download_pikpak_share.py
       - name: Tao file zip
         if: env.SKIP == '0'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force PikPak-Auto-Save_Portable | Out-Null
-          Copy-Item 'dist/PikPak Auto Save.exe', auto_download_pikpak_share.py, icon.ico, *.txt PikPak-Auto-Save_Portable/
+          Copy-Item 'dist/PikPak Auto Save.exe', auto_download_pikpak_share.py, pikpak_web.py, icon.ico, *.txt PikPak-Auto-Save_Portable/
+          Copy-Item -Recurse web PikPak-Auto-Save_Portable/
           Compress-Archive -Force PikPak-Auto-Save_Portable PikPak-Auto-Save_Portable.zip
           New-Item -ItemType Directory -Force PikPak-Auto-Save | Out-Null
-          Copy-Item auto_download_pikpak_share.py, icon.ico, *.txt, *.bat PikPak-Auto-Save/
+          Copy-Item auto_download_pikpak_share.py, pikpak_web.py, icon.ico, *.txt, *.bat PikPak-Auto-Save/
+          Copy-Item -Recurse web PikPak-Auto-Save/
           Compress-Archive -Force PikPak-Auto-Save "PikPak-Auto-Save_$env:VER.zip"
+      - name: Chay thu exe (giao dien web) - khong dat thi KHONG phat hanh
+        if: env.SKIP == '0'
+        shell: pwsh
+        run: |
+          $ok = $true
+          foreach ($case in @("portable", "exe_only")) {
+            $d = "T_$case"
+            New-Item -ItemType Directory -Force $d | Out-Null
+            if ($case -eq "portable") { Copy-Item -Recurse PikPak-Auto-Save_Portable/* $d/ } else { Copy-Item 'dist/PikPak Auto Save.exe' $d/ }
+            $p = Start-Process -FilePath "$d/PikPak Auto Save.exe" -ArgumentList '--selftest' -PassThru
+            if (-not $p.WaitForExit(120000)) { Stop-Process -Id $p.Id -Force; Write-Host "[$case] qua 120s" }
+            if (Test-Path "$d/selftest.txt") {
+              $r = Get-Content "$d/selftest.txt" -Raw; Write-Host "[$case] $r"
+              $j = $r | ConvertFrom-Json
+              if ($j.tiles -ne 6 -or $j.js_error -or ($j.js_errors -and $j.js_errors -ne "[]")) { $ok = $false }
+            } else { Write-Host "[$case] KHONG CO selftest.txt"; $ok = $false }
+            Get-ChildItem $d | Format-Table Name, Length
+          }
+          if (-not $ok) { throw "Giao dien web khong chay duoc tren Windows - dung phat hanh" }
+      - uses: actions/upload-artifact@v4
+        if: always() && env.SKIP == '0'
+        with:
+          name: selftest
+          path: |
+            T_*/selftest*.png
+            T_*/selftest.txt
       - uses: softprops/action-gh-release@v2
         if: env.SKIP == '0'
         with:

@@ -21,3 +21,4 @@ CÁCH 2 - TỰ BÁO VÀ TỰ CẬP NHẬT QUA GITHUB (đã thiết lập sẵn)
 LƯU Ý
   - Thư mục Data (config.json, owned.json, history.json, rclone.conf) không bao giờ bị ghi đè khi cập nhật.
   - Muốn quay lại bản cũ: lấy file trong thư mục _BanCu đổi tên thành auto_download_pikpak_share.py.
+  - Từ v3.0: bản cập nhật có thêm pikpak_web.py và thư mục web (giao diện web) - tool tự chép cùng.

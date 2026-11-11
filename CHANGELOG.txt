@@ -1,6 +1,25 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v3.0  (11/11/2026)
+  - GIAO DIỆN WEB trong cửa sổ app (pywebview + Edge WebView2 có sẵn trong Windows 10/11), làm lại đủ 4 tab:
+    · Quét & Tải: 4 ô thống kê có biểu tượng nổi khối, số phát sáng; thanh tải kiểu ống thủy tinh lõm, sọc chạy,
+      phát sáng theo màu; bảng bo góc, dòng chọn có vạch đỏ + ô tick đỏ bóng, nhãn trạng thái phát sáng;
+      nhật ký kiểu màn hình cũ (chữ xanh phát sáng, vạch quét).
+    · Thư mục phim: thẻ thư mục, Thêm / Sửa (chọn trong link chia sẻ, chọn thư mục My PikPak, chọn thư mục HDD),
+      Dán nhiều nguồn, Xuất / Nhập, Chẩn đoán, Lên / Xuống / Xóa, khung file (Quét file, chọn, Thêm vào /
+      Bỏ khỏi Danh sách đã có, Lưu), cảnh báo thiếu tập / lâu không có tập mới.
+    · Lịch sử: chọn nhiều tập, Đánh dấu Xong, Lưu lại vào My PikPak, Xóa (để tải lại), Xóa toàn bộ, lọc, sắp xếp.
+    · Cài đặt: Chung · My PikPak (đăng nhập, trạng thái, VIP, dung lượng) · rclone · Máy này & Sao lưu.
+  - Nút 3D: nổi lên, mép trên sáng, bóng đổ dưới, bấm thì lún xuống; rê chuột sáng viền đỏ; nút chính
+    "Quét & Tải", "Tải mục đã chọn" đỏ bóng có vệt sáng lướt qua liên tục.
+  - Đèn LED viền kim loại, nhịp thở; đèn vàng (đang chạy) và đỏ (lỗi) có vòng sáng lan như sóng; mỗi đèn nằm trên
+    1 nút nổi, bấm là mở đúng chỗ cần sửa; thẻ lỗi tô đỏ, phát sáng, có nút sửa đỏ (Đăng nhập / Tải / Thử lại / Xem).
+  - Mục menu đang chọn nổi như 1 phím, biểu tượng trong ô vuông xanh bóng; đèn trạng thái + số đếm ở menu.
+  - Giữ nguyên toàn bộ phần lõi v2.5 (quét, Save My PikPak, rclone, COPY_TO_IPHONE, báo lỗi, sao lưu, cập nhật),
+    khay đồng hồ, khởi động cùng Windows, thông báo, mật khẩu admin, nhớ kích thước cửa sổ, sáng / tối.
+  - Giao diện cũ (Tk) vẫn còn làm dự phòng: "◐ Giao diện" > "Mở giao diện cũ"; máy không chạy được WebView2 tự dùng.
+
 v2.5  (09/11/2026)
   - Chỉ giữ giao diện 1, 3, 7. Đang dùng giao diện 2 / 4 thì tự chuyển sang 3; giao diện 5 / 6 thì sang 7.
   - Giao diện 7: bỏ thẻ RaiDrive ở bảng đèn trạng thái.

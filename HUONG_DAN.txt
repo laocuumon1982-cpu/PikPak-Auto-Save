@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v2.5 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v3.0 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -30,12 +30,14 @@ MẸO
    - Mật khẩu admin: tab Thư mục phim / Cài đặt cần mật khẩu (tạo ở lần đầu bấm vào). "🔒 Khóa lại" trên thanh
      tiêu đề để khóa ngay; tự khóa sau 10 phút không thao tác. Quên mật khẩu: tắt tool, xóa 2 dòng "admin_hash",
      "admin_salt" trong Data\config.json rồi mở lại.
-   - Giao diện: 1 (gốc v1.3) / 3 (thanh bên xanh da trời nhạt, thanh tải dải liền, nhãn trạng thái)
-     / 7 (nút nổi 3D, bảng đèn trạng thái, thẻ PikPak hiện email · VIP · dung lượng, đèn nhịp thở, thanh tải sọc chạy).
-     Đổi tên từng giao diện: Cài đặt > Chung > Giao diện > "✎ Đổi tên" (để trống = tên mặc định).
-     Giao diện 7: bấm thẻ "Tự quét" ở bảng đèn để bật / tắt tự quét.
-     Mỗi giao diện có "⭐ Đặt mặc định" và "🗑 Xóa" (Cài đặt > Chung > Giao diện, hoặc nút "◐ Giao diện").
-     Giao diện gốc không xóa được; giao diện đã xóa khôi phục lại được.
+   - GIAO DIỆN WEB (v3.0): cửa sổ app dùng Edge WebView2 có sẵn trong Windows 10/11 - nút nổi 3D, đèn LED,
+     thanh tải sọc chạy. Nút "◐ Giao diện": Sáng / Tối / "Mở giao diện cũ (bản Tk)".
+     Giao diện cũ (giao diện 1, 3, 7 của v2.5) vẫn còn: muốn quay lại giao diện web, trong giao diện cũ vào
+     Cài đặt > Chung > "🌐 Dùng giao diện web". Máy thiếu WebView2 / bản Python chưa cài pywebview: tool tự mở giao diện cũ.
+     Thiếu WebView2: tải "Evergreen Bootstrapper" ở https://developer.microsoft.com/microsoft-edge/webview2/
+   - Cột trái - BẢNG ĐÈN TRẠNG THÁI (xanh = tốt, vàng = đang chạy, đỏ = lỗi, xám = tắt). Bấm thẻ để mở đúng chỗ cần sửa;
+     thẻ lỗi có nút đỏ: PikPak "Đăng nhập", rclone "Tải", Sao lưu "Thử lại", Lỗi "Xem" (mở + copy báo cáo lỗi để dán cho Claude).
+     Thẻ "Tự quét": bấm để bật / tắt, chọn số phút ngay trong thẻ. Thẻ trên cùng "Có N mục cần xử lý": bấm để xem + "Sửa".
    - Nút "⟳ Cập nhật" góc trên: tự báo bản mới trên GitHub (laocuumon1982-cpu/PikPak-Auto-Save).
-   - Lỗi: tool ghi báo cáo vào Data\BaoLoi - bấm dòng đỏ ở thanh bên để COPY, dán cho Claude sửa.
+   - Lỗi: tool ghi báo cáo vào Data\BaoLoi - bấm "Xem" ở thẻ Lỗi (cột trái) để mở + COPY, dán cho Claude sửa.
    - Thư mục Data chứa toàn bộ cài đặt / Danh sách đã có / lịch sử: lên bản mới chỉ cần chép Data sang.
