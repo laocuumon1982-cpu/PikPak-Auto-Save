@@ -34,6 +34,11 @@ jobs:
             if (Test-Path "$d/selftest.txt") { Write-Host "[$case] $(Get-Content $d/selftest.txt -Raw)" } else { Write-Host "[$case] KHONG CO selftest.txt" }
             if (Test-Path "$d/Data/log.txt") { Get-Content "$d/Data/log.txt" -Tail 15 }
             foreach ($n in @("selftest", "selftest_history")) {
-              if (Test-Path "$d/$n.jpg") { Write-Host "B64BEGIN_${case}_$n"; [Convert]::ToBase64String([IO.File]::ReadAllBytes("$d/$n.jpg")); Write-Host "B64END" }
+              if (Test-Path "$d/$n.jpg") {
+                $b = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$d/$n.jpg"))
+                Write-Host "B64BEGIN_${case}_$n"
+                for ($i = 0; $i -lt $b.Length; $i += 4000) { Write-Host ("B64:" + $b.Substring($i, [Math]::Min(4000, $b.Length - $i))) }
+                Write-Host "B64END"
+              }
             }
           }
