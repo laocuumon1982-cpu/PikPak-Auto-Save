@@ -566,8 +566,8 @@ function renderSettings() {
       <div class="tablewrap" style="flex:none;max-height:190px;margin-top:4px"><table class="ptable"><thead><tr><th style="width:40px"></th><th>MÁY</th><th>CẬP NHẬT</th><th>ĐƯỜNG DẪN</th></tr></thead>
         <tbody id="m-rows">${S2.profiles.map(p => `<tr data-n="${esc(p.name)}"><td><span class="chk"></span></td><td>${esc(p.name)}${p.me ? " <b style='color:var(--green)'>(máy này)</b>" : ""}</td><td>${esc(p.when)}</td><td>${esc(p.paths)}</td></tr>`).join("")}</tbody></table></div>
       <div class="fr" style="margin-top:10px"><button class="btn" id="m-copy">⧉ Chép thiết lập từ máy đã chọn</button><button class="btn out" id="m-del">✕ Xóa hồ sơ máy đã chọn</button></div></div>
-    <div class="sec"><h4>Sao lưu dữ liệu</h4><div class="d">Phòng khi ổ cứng hỏng: config.json (thư mục, cài đặt), owned.json (Danh sách đã có), history.json (lịch sử) được nén và đưa lên ${esc(S2.backup_remote)}.</div>
-      ${ck("backup_on", "Sau mỗi lần tải xong, tự sao lưu dữ liệu lên PikPak")}
+    <div class="sec"><h4 style="text-transform:none;font-size:13px">Sao lưu Dữ liệu (SQLite): pikpak.db và config.json</h4><div class="d">Phòng khi ổ cứng hỏng: <b>pikpak.db</b> (SQLite: Danh sách đã có, lịch sử tải, nhật ký) và <b>config.json</b> (thư mục phim, cài đặt) được nén và đưa lên ${esc(S2.backup_remote)}.</div>
+      ${ck("backup_on", "Sau mỗi lần tải xong, tự sao lưu Dữ liệu (SQLite): pikpak.db và config.json lên PikPak")}
       <div class="fr"><button class="btn red shine" id="m-bk">☁ Sao lưu lên PikPak ngay</button><button class="btn" id="m-rpk">⟲ Khôi phục từ PikPak...</button>
         <button class="btn" id="m-bf">⇩ Sao lưu ra file...</button><button class="btn" id="m-rf">⇧ Khôi phục từ file...</button></div>
       <div class="d">${S2.last_backup ? "✔ Lần sao lưu gần nhất: " + esc(S2.last_backup) : "Chưa sao lưu lần nào."}</div></div>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v3.1 by Duy Anh
+PikPak Auto Save v3.2 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -44,7 +44,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v3.1 by Duy Anh"
+APP_VERSION = "v3.2 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -7250,9 +7250,10 @@ class App(tk.Tk):
         ttk.Button(fr, text="⧉  Chép thiết lập từ máy đã chọn", command=self.copy_profile_selected).pack(side="left")
         ttk.Button(fr, text="✕  Xóa hồ sơ máy đã chọn", style="Danger.TButton",
                    command=self.delete_profile_selected).pack(side="left", padx=8)
-        g.section("Sao lưu dữ liệu", "Phòng khi ổ cứng hỏng: config.json (thư mục, cài đặt), owned.json (Danh sách "
-                                      f"đã có), history.json (lịch sử) được nén và đưa lên My PikPak/{BACKUP_DIR}/.")
-        g.check("Sau mỗi lần tải xong, tự sao lưu dữ liệu lên PikPak", self.backup_on_var)
+        g.section("Sao lưu Dữ liệu (SQLite): pikpak.db và config.json",
+                  "Phòng khi ổ cứng hỏng: pikpak.db (SQLite: Danh sách đã có, lịch sử tải, nhật ký) và config.json "
+                  f"(thư mục phim, cài đặt) được nén và đưa lên My PikPak/{BACKUP_DIR}/.")
+        g.check("Sau mỗi lần tải xong, tự sao lưu Dữ liệu (SQLite): pikpak.db và config.json lên PikPak", self.backup_on_var)
         fr = g.frame()
         ttk.Button(fr, text="☁  Sao lưu lên PikPak ngay", style="Accent.TButton", command=self.backup_now).pack(side="left")
         ttk.Button(fr, text="⟲  Khôi phục từ PikPak...", command=self.restore_from_pikpak).pack(side="left", padx=8)

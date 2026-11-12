@@ -1,6 +1,10 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v3.2  (12/11/2026)
+  - Cài đặt → Máy này & Sao lưu: mục sao lưu đổi thành "Sao lưu Dữ liệu (SQLite): pikpak.db và config.json"
+    (mô tả đúng những gì được sao lưu từ v3.1).
+
 v3.1  (12/11/2026)
   - Lưu dữ liệu vào SQLite: Danh sách đã có, lịch sử tải và nhật ký nằm chung 1 file Data\pikpak.db.
     Cài đặt vẫn ở Data\config.json (dễ mở ra sửa tay).
