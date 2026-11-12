@@ -26,7 +26,7 @@ from auto_download_pikpak_share import (
     pikpak_join, source_link, folder_link, new_folder_id, one_line, natural_key, sub_label, match_keywords,
     make_source, find_gaps, strip_accents, safe_name, resolve_iphone_dir, copy_with_progress, make_backup_zip,
     download_rclone, github_latest, ver_tuple, download_file, stage_update, clean_env, restart_self, set_startup,
-    LocalSource)
+    LocalSource, store, write_log, restore_backup_zip, DB_FILE)
 
 WEB_DIR_NAME = "web"
 V_SHORT = APP_VERSION.split(" by")[0]
@@ -109,14 +109,12 @@ class Engine:
                 pk = pikpak_join(self.cfg.get("pikpak_root", ""), f.get("pikpak_dir", "")) if \
                     self.cfg.get("pikpak_on", True) else ""
                 f.update(local_dir=hdd, pikpak_dir=pk, sub_movie=True, dest_rev=3)
-        self.history = load_json(HISTORY_FILE, {})
+        self.db = store()                   # v3.1: Danh sách đã có + lịch sử + nhật ký trong Data/pikpak.db
+        self.history = self.db.load("history")
         for h in self.history.values():
             if h.get("status") in WATCH_STATUSES:
                 h["status"] = STATUS_FAIL
-        self.owned = load_json(OWNED_FILE, None)
-        if not isinstance(self.owned, dict):
-            self.owned = {}
-            save_json(OWNED_FILE, self.owned)
+        self.owned = self.db.load("owned")
         self.item_meta, self.present_codes, self.sub_of = {}, set(), {}
         self.q = EngineQueue()
         self.worker = None
@@ -182,12 +180,16 @@ class Engine:
 
     def save_history(self):
         with self.lock:
-            save_json(HISTORY_FILE, self.history)
+            if self._no_save:               # vừa khôi phục / cập nhật: không ghi đè dữ liệu
+                return
+            self.db.save("history", self.history)
             self.hist_ver += 1
 
     def save_owned(self):
         with self.lock:
-            save_json(OWNED_FILE, self.owned)
+            if self._no_save:
+                return
+            self.db.save("owned", self.owned)
 
     def refresh_history(self):
         self.hist_ver += 1
@@ -272,11 +274,7 @@ class Engine:
         self.log_seq += 1
         self.log_lines.append(line)
         del self.log_lines[:-400]
-        try:
-            with open(core.LOG_FILE, "a", encoding="utf-8") as fh:
-                fh.write(f"{dt.datetime.now():%Y-%m-%d} {line}\n")
-        except OSError:
-            pass
+        write_log(text)
 
     def _handle(self, msg):
         kind = msg[0]
@@ -1206,7 +1204,8 @@ class Engine:
                           if p.get("updated") else ""})
         out.update(user=c.get("pikpak_user", ""), machine=MACHINE, profiles=profs, data=str(DATA_DIR), base=str(BASE),
                    last_backup=c.get("last_backup", ""), backup_remote=self._backup_remote(), intervals=INTERVAL_CHOICES,
-                   version=APP_NAME, tray_ok=bool(core.TRAY_OK), rclone=find_rclone(c.get("rclone_path", "")) or "")
+                   version=APP_NAME, tray_ok=bool(core.TRAY_OK), rclone=find_rclone(c.get("rclone_path", "")) or "",
+                   db=self.db_info())
         return out
 
     def save_settings(self, d):
@@ -1414,6 +1413,8 @@ class Engine:
             return {"error": f"Không đọc được file: {e}"}
         if not names:
             return {"error": "File không phải bản sao lưu của tool."}
+        if "pikpak.db" in names:
+            names = [n for n in names if n not in ("owned.json", "history.json")]
         return {"info": info, "names": names, "path": path}
 
     def restore_fetch_pikpak(self):
@@ -1428,17 +1429,28 @@ class Engine:
         return self.restore_preview(str(tmp))
 
     def restore_apply(self, path):
-        import zipfile
         with self.lock:
-            with zipfile.ZipFile(path) as z:
-                names = [n for n in z.namelist() if n in BACKUP_FILES]
-                for n in names:
-                    if (DATA_DIR / n).is_file():
-                        shutil.copy(DATA_DIR / n, DATA_DIR / (n + ".bak"))
-                    z.extract(n, DATA_DIR)
+            try:
+                restore_backup_zip(path)
+            except Exception as e:          # noqa: BLE001
+                return f"Không khôi phục được: {e}"
             self._no_save = True
         self.restart(["--after-update"])
         return ""
+
+    def export_log(self):
+        dest = DATA_DIR / "NhatKy_xuat.txt"
+        n = self.db.export_log(str(dest))
+        open_target(str(dest))
+        return f"Đã xuất {n} dòng nhật ký gần nhất ra {dest.name}."
+
+    def db_info(self):
+        try:
+            size = human_size(DB_FILE.stat().st_size)
+        except OSError:
+            size = "?"
+        return {"path": str(DB_FILE), "size": size, "owned": self.db.count("owned"),
+                "history": self.db.count("history"), "log": self.db.count("log")}
 
     # ----- COPY_TO_IPHONE bù
     def iphone_preview(self, days=7):
@@ -1565,8 +1577,8 @@ class Engine:
                 new_ver, pending_exe = stage_update(path)
                 self.log(f"⟳ Đã cập nhật lên {new_ver or tag or 'bản mới'} - khởi động lại...")
                 with self.lock:
+                    self.db.save("history", self.history)
                     self._no_save = True
-                    save_json(HISTORY_FILE, self.history)
                 self.update_info = dict(self.update_info, restarting=True)
                 self._restart_after_update(pending_exe)
             except Exception as e:          # noqa: BLE001
@@ -1918,6 +1930,12 @@ class Api:
     def restore_apply(self, path):
         return self._locked() or self._eng.restore_apply(path)
 
+    def export_log(self):
+        return self._eng.export_log()
+
+    def db_info(self):
+        return self._eng.db_info()
+
     def test_notify(self):
         self._eng.save_config()
         self._eng.notify(APP_TITLE, "Thông báo hoạt động bình thường.")
@@ -2032,7 +2050,7 @@ class AppWindow:
         self._remember()
         try:
             self.eng.save_config()
-            save_json(HISTORY_FILE, self.eng.history)
+            self.eng.save_history()
         except Exception:                   # noqa: BLE001
             pass
         if self.tray:
@@ -2079,7 +2097,7 @@ class AppWindow:
         self.eng.stop_flag.set()
         self._remember()
         self.eng.save_config()
-        save_json(HISTORY_FILE, self.eng.history)
+        self.eng.save_history()
         if self.tray:
             try:
                 self.tray.stop()
@@ -2267,7 +2285,7 @@ def run_web(argv=None):
     with eng.lock:
         if not eng._no_save:
             eng.save_config()
-            save_json(HISTORY_FILE, eng.history)
+            eng.save_history()
     os._exit(0)
 
 

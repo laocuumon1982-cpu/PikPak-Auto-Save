@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v3.0 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v3.1 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -40,4 +40,6 @@ MẸO
      Thẻ "Tự quét": bấm để bật / tắt, chọn số phút ngay trong thẻ. Thẻ trên cùng "Có N mục cần xử lý": bấm để xem + "Sửa".
    - Nút "⟳ Cập nhật" góc trên: tự báo bản mới trên GitHub (laocuumon1982-cpu/PikPak-Auto-Save).
    - Lỗi: tool ghi báo cáo vào Data\BaoLoi - bấm "Xem" ở thẻ Lỗi (cột trái) để mở + COPY, dán cho Claude sửa.
-   - Thư mục Data chứa toàn bộ cài đặt / Danh sách đã có / lịch sử: lên bản mới chỉ cần chép Data sang.
+   - Thư mục Data: config.json (cài đặt) + pikpak.db (SQLite: Danh sách đã có, lịch sử tải, nhật ký).
+     Lên bản mới / đồng bộ sang máy khác: chép thư mục Data (hoặc 2 file đó) sang là xong.
+     File JSON của bản cũ (trước v3.1) được giữ trong Data\_JSON_cu.

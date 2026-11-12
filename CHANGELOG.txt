@@ -1,6 +1,17 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v3.1  (12/11/2026)
+  - Lưu dữ liệu vào SQLite: Danh sách đã có, lịch sử tải và nhật ký nằm chung 1 file Data\pikpak.db.
+    Cài đặt vẫn ở Data\config.json (dễ mở ra sửa tay).
+    · Chỉ ghi phần thay đổi, mỗi lần ghi xong hẳn hoặc không đổi gì (không để dữ liệu dở dang), có chỉ mục nên
+      tìm nhanh dù rất nhiều dòng. Database luôn là 1 file duy nhất: đồng bộ / sao lưu chỉ cần chép pikpak.db + config.json.
+    · Lần đầu mở v3.1: tự nhập owned.json, history.json, log.txt cũ vào database, rồi cất các file cũ vào Data\_JSON_cu
+      (giữ làm bản sao lưu).
+    · Sao lưu lên PikPak / ra file: config.json + pikpak.db. Khôi phục được cả bản sao lưu cũ (owned.json, history.json).
+    · Cài đặt → Máy này & Sao lưu: xem số dòng / dung lượng database, "Xuất nhật ký ra file...".
+  - Muốn quay về bản trước v3.1: chép owned.json, history.json trong Data\_JSON_cu\<ngày> ra thư mục Data.
+
 v3.0  (11/11/2026)
   - GIAO DIỆN WEB trong cửa sổ app (pywebview + Edge WebView2 có sẵn trong Windows 10/11), làm lại đủ 4 tab:
     · Quét & Tải: 4 ô thống kê có biểu tượng nổi khối, số phát sáng; thanh tải kiểu ống thủy tinh lõm, sọc chạy,

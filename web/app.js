@@ -571,8 +571,11 @@ function renderSettings() {
       <div class="fr"><button class="btn red shine" id="m-bk">☁ Sao lưu lên PikPak ngay</button><button class="btn" id="m-rpk">⟲ Khôi phục từ PikPak...</button>
         <button class="btn" id="m-bf">⇩ Sao lưu ra file...</button><button class="btn" id="m-rf">⇧ Khôi phục từ file...</button></div>
       <div class="d">${S2.last_backup ? "✔ Lần sao lưu gần nhất: " + esc(S2.last_backup) : "Chưa sao lưu lần nào."}</div></div>
-    <div class="sec"><h4>Thư mục Data</h4><div class="d">Mọi dữ liệu (cấu hình, Danh sách đã có, lịch sử, đăng nhập PikPak, nhật ký) nằm trong thư mục Data cạnh tool. Lên bản mới: chép thư mục Data của bản cũ sang là xong.</div>
-      <div class="fr"><button class="btn" id="m-data">▸ Mở thư mục Data</button><span style="color:var(--muted)">${esc(S2.data)}</span></div></div>`;
+    <div class="sec"><h4>Dữ liệu (SQLite)</h4><div class="d">Danh sách đã có, lịch sử tải và nhật ký nằm chung trong 1 file database <b>pikpak.db</b> (SQLite): chỉ ghi phần thay đổi, mỗi lần ghi xong hẳn hoặc không đổi gì, tìm nhanh dù rất nhiều dòng. Cài đặt vẫn ở config.json (mở ra sửa tay được). Đồng bộ / sao lưu tay: chép 2 file pikpak.db + config.json trong thư mục Data. File JSON cũ (trước v3.1) được giữ trong Data\\_JSON_cu.</div>
+      <div class="readout">${led("ok", "big")}<div class="rows"><b>File</b><span>${esc(S2.db.path)}</span><b>Dung lượng</b><span>${esc(S2.db.size)}</span>
+        <b>Danh sách đã có</b><span>${S2.db.owned.toLocaleString("vi-VN")} tập</span><b>Lịch sử tải</b><span>${S2.db.history.toLocaleString("vi-VN")} tập</span>
+        <b>Nhật ký</b><span>${S2.db.log.toLocaleString("vi-VN")} dòng</span></div></div>
+      <div class="fr" style="margin-top:10px"><button class="btn" id="m-data">▸ Mở thư mục Data</button><button class="btn" id="m-log">⇩ Xuất nhật ký ra file...</button></div></div>`;
   el.querySelectorAll("[data-k]").forEach(x => x.addEventListener(x.type === "checkbox" || x.tagName === "SELECT" ? "change" : "input", () => {
     SET[x.dataset.k] = x.type === "checkbox" ? x.checked : x.value; dirty = true; $("savebar").classList.add("isdirty"); }));
   const on = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
@@ -601,6 +604,7 @@ function renderSettings() {
   on("m-rf", async () => restoreFlow(await api("restore_pick")));
   on("m-rpk", async () => { toast("Đang tải bản sao lưu từ PikPak..."); restoreFlow(await api("restore_fetch_pikpak")); });
   on("m-data", () => api("open_data"));
+  on("m-log", () => api("export_log").then(m => toast(m)));
   if (seg === "pikpak") pkCheck();
   if (seg === "rclone") rcCheck();
 }

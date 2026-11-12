@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PikPak Auto Save v3.0 by Duy Anh
+PikPak Auto Save v3.1 by Duy Anh
  - Nguồn phim: thư mục con trong link chia sẻ PikPak (mypikpak.com/s/...).
  - Đích 1 (chạy trước): Save (lưu) tập mới vào My PikPak của bạn - sao chép trên máy chủ PikPak, không tốn mạng.
  - Đích 2: rclone (tài khoản của bạn) tải tập đó từ My PikPak về HDD của PC (đa luồng, nhanh).
@@ -16,6 +16,7 @@ import os
 import queue
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -43,7 +44,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v3.0 by Duy Anh"
+APP_VERSION = "v3.1 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -74,7 +75,9 @@ CONFIG_FILE = DATA_DIR / "config.json"
 HISTORY_FILE = DATA_DIR / "history.json"
 OWNED_FILE = DATA_DIR / "owned.json"        # Danh sách đã có (không tải)
 RCLONE_CONF = DATA_DIR / "rclone.conf"      # cấu hình rclone (đăng nhập PikPak) -> đi theo thư mục Data
-BACKUP_FILES = ("config.json", "owned.json", "history.json")
+BACKUP_FILES = ("config.json", "pikpak.db", "owned.json", "history.json")   # json: bản sao lưu cũ (trước v3.1)
+DB_FILE = DATA_DIR / "pikpak.db"            # v3.1: Danh sách đã có + lịch sử tải + nhật ký (SQLite, 1 file)
+JSON_OLD_DIR = DATA_DIR / "_JSON_cu"        # file JSON cũ được giữ lại ở đây sau khi chuyển sang SQLite
 BACKUP_DIR = "_Backup PikPakShare"
 EXE_NAME = "PikPak Auto Save.exe"
 OLD_EXE_NAMES = ("PikPak Auto Download.exe", "Auto Download - PikPak Share.exe")     # tên exe v1.1 / v1.0
@@ -365,6 +368,262 @@ def save_json(path, data):
     os.replace(tmp, path)
 
 
+class DataStore:
+    """v3.1: dữ liệu phình to theo thời gian (Danh sách đã có, lịch sử tải, nhật ký) nằm trong 1 file SQLite
+    Data/pikpak.db. Cài đặt vẫn ở config.json (dễ mở ra sửa tay).
+    - Chỉ ghi những dòng thay đổi, mỗi lần ghi là 1 giao dịch (xong hẳn hoặc không đổi gì).
+    - Lần đầu: tự nhập owned.json / history.json / log.txt cũ vào, rồi chuyển các file cũ vào Data/_JSON_cu.
+    - journal_mode=DELETE: database luôn chỉ là 1 file (dễ chép / đồng bộ / sao lưu)."""
+    TABLES = ("owned", "history")
+
+    def __init__(self, path=None):
+        self.path = Path(path or DB_FILE)
+        self.lock = threading.RLock()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.db = sqlite3.connect(str(self.path), check_same_thread=False, timeout=30, isolation_level=None)
+        self.db.execute("PRAGMA journal_mode=DELETE")
+        self.db.execute("PRAGMA synchronous=FULL")
+        self.db.executescript("""
+            CREATE TABLE IF NOT EXISTS owned  (k TEXT PRIMARY KEY, folder TEXT, name TEXT, ts REAL, j TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS history(k TEXT PRIMARY KEY, status TEXT, ts REAL, folder TEXT, name TEXT,
+                                               j TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS log    (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, line TEXT);
+            CREATE TABLE IF NOT EXISTS meta   (k TEXT PRIMARY KEY, v TEXT);
+            CREATE INDEX IF NOT EXISTS ix_owned_folder ON owned(folder);
+            CREATE INDEX IF NOT EXISTS ix_hist_status ON history(status);
+            CREATE INDEX IF NOT EXISTS ix_hist_ts ON history(ts);
+            CREATE INDEX IF NOT EXISTS ix_log_ts ON log(ts);
+        """)
+        self._cache = {t: {} for t in self.TABLES}
+        self._log_n = 0
+        self.import_json()
+
+    # ----- chung
+    def _tx(self, fn):
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                fn(self.db)
+                self.db.execute("COMMIT")
+            except BaseException:
+                self.db.execute("ROLLBACK")
+                raise
+
+    @staticmethod
+    def _row(table, k, v, j):
+        v = v if isinstance(v, dict) else {}
+        try:
+            ts = float(v.get("ts") or 0)
+        except (TypeError, ValueError):
+            ts = 0.0
+        if table == "owned":
+            return (k, str(v.get("folder", "")), str(v.get("name", "")), ts, j)
+        return (k, str(v.get("status", "")), ts, str(v.get("folder", "")), str(v.get("name", "")), j)
+
+    def _upsert(self, db, table, rows):
+        if table == "owned":
+            db.executemany("INSERT OR REPLACE INTO owned(k, folder, name, ts, j) VALUES (?,?,?,?,?)", rows)
+        else:
+            db.executemany("INSERT OR REPLACE INTO history(k, status, ts, folder, name, j) VALUES (?,?,?,?,?,?)", rows)
+
+    def load(self, table):
+        with self.lock:
+            out, cache = {}, {}
+            for k, j in self.db.execute(f"SELECT k, j FROM {table}"):
+                try:
+                    out[k] = json.loads(j)
+                    cache[k] = j
+                except ValueError:
+                    pass
+            self._cache[table] = cache
+            return out
+
+    def save(self, table, data):
+        """Ghi những dòng thêm / sửa / xóa so với lần ghi trước (1 giao dịch)."""
+        with self.lock:
+            new = {str(k): json.dumps(v, ensure_ascii=False, sort_keys=True) for k, v in list(data.items())}
+            old = self._cache[table]
+            changed = [self._row(table, k, data.get(k), j) for k, j in new.items() if old.get(k) != j]
+            gone = [(k,) for k in old if k not in new]
+            if not changed and not gone:
+                return 0
+
+            def work(db):
+                if changed:
+                    self._upsert(db, table, changed)
+                if gone:
+                    db.executemany(f"DELETE FROM {table} WHERE k=?", gone)
+            self._tx(work)
+            self._cache[table] = new
+            return len(changed) + len(gone)
+
+    def replace(self, table, data):
+        """Thay toàn bộ bảng (khôi phục từ bản sao lưu JSON cũ)."""
+        with self.lock:
+            rows = [self._row(table, str(k), v, json.dumps(v, ensure_ascii=False, sort_keys=True))
+                    for k, v in data.items()]
+
+            def work(db):
+                db.execute(f"DELETE FROM {table}")
+                self._upsert(db, table, rows)
+            self._tx(work)
+            self._cache[table] = {r[0]: r[-1] for r in rows}
+
+    def count(self, table):
+        with self.lock:
+            return self.db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+    # ----- nhật ký
+    def add_log(self, line, ts=None):
+        try:
+            with self.lock:
+                self.db.execute("INSERT INTO log(ts, line) VALUES (?, ?)", (ts or time.time(), str(line)))
+                self._log_n += 1
+                if self._log_n % 2000 == 0:          # giữ 300.000 dòng gần nhất
+                    self.db.execute("DELETE FROM log WHERE id <= (SELECT MAX(id) FROM log) - 300000")
+        except sqlite3.Error:
+            pass
+
+    def export_log(self, dest, limit=20000):
+        with self.lock:
+            rows = self.db.execute("SELECT ts, line FROM (SELECT id, ts, line FROM log ORDER BY id DESC LIMIT ?) "
+                                   "ORDER BY id", (limit,)).fetchall()
+        with open(dest, "w", encoding="utf-8") as fh:
+            for ts, line in rows:
+                fh.write(f"{dt.datetime.fromtimestamp(ts):%Y-%m-%d %H:%M:%S}  {line}\n")
+        return len(rows)
+
+    # ----- sao lưu / khôi phục
+    def backup_to(self, dest):
+        """Bản sao nhất quán của database (dùng API backup của SQLite, không cần dừng tool)."""
+        with self.lock:
+            dst = sqlite3.connect(str(dest))
+            try:
+                self.db.backup(dst)
+            finally:
+                dst.close()
+
+    def restore_from(self, src):
+        with self.lock:
+            s_ = sqlite3.connect(str(src))
+            try:
+                s_.execute("SELECT COUNT(*) FROM owned").fetchone()       # đúng là database của tool
+                s_.backup(self.db)
+            finally:
+                s_.close()
+            for t in self.TABLES:
+                self.load(t)
+
+    # ----- chuyển dữ liệu JSON cũ
+    def import_json(self, folder=None, replace=False):
+        """Nhập owned.json / history.json / log.txt (của bản cũ hoặc bản sao lưu cũ) vào database rồi cất
+        file cũ vào Data/_JSON_cu. replace=False: gộp (không xóa dữ liệu đã có trong database)."""
+        folder = Path(folder or DATA_DIR)
+        moved = []
+        for name, table in (("owned.json", "owned"), ("history.json", "history")):
+            fp = folder / name
+            if not fp.is_file():
+                continue
+            data = load_json(fp, None)
+            if isinstance(data, dict):
+                rows = [self._row(table, str(k), v, json.dumps(v, ensure_ascii=False, sort_keys=True))
+                        for k, v in data.items()]
+
+                def work(db, rows=rows, table=table):
+                    if replace:
+                        db.execute(f"DELETE FROM {table}")
+                    self._upsert(db, table, rows)
+                self._tx(work)
+            moved.append(fp)
+        lf = folder / "log.txt"
+        if lf.is_file() and not replace:
+            rows = []
+            try:
+                with open(lf, encoding="utf-8", errors="replace") as fh:
+                    for line in fh:
+                        line = line.rstrip("\n")
+                        try:
+                            ts = dt.datetime.strptime(line[:19], "%Y-%m-%d %H:%M:%S").timestamp()
+                            line = line[19:].strip()
+                        except ValueError:
+                            ts = 0.0
+                        if line:
+                            rows.append((ts, line))
+                rows = rows[-300000:]
+                self._tx(lambda db: db.executemany("INSERT INTO log(ts, line) VALUES (?, ?)", rows))
+                moved.append(lf)
+            except OSError:
+                pass
+        if moved:
+            dest = JSON_OLD_DIR / dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+            dest.mkdir(parents=True, exist_ok=True)
+            for fp in moved:
+                try:
+                    shutil.move(str(fp), str(dest / fp.name))
+                except OSError:
+                    pass
+            with self.lock:
+                self.db.execute("INSERT OR REPLACE INTO meta(k, v) VALUES ('json_imported', ?)",
+                                (dt.datetime.now().isoformat(timespec="seconds"),))
+        return [fp.name for fp in moved]
+
+
+_STORE = None
+
+
+def store():
+    """Database dùng chung (mở 1 lần)."""
+    global _STORE
+    if _STORE is None:
+        _STORE = DataStore()
+    return _STORE
+
+
+def write_log(line):
+    """Ghi 1 dòng nhật ký vào database (lỗi database -> ghi tạm ra log.txt)."""
+    try:
+        store().add_log(line)
+    except Exception:
+        try:
+            with open(LOG_FILE, "a", encoding="utf-8") as fh:
+                fh.write(f"{dt.datetime.now():%Y-%m-%d %H:%M:%S}  {line}\n")
+        except OSError:
+            pass
+
+
+def restore_backup_zip(path):
+    """Khôi phục từ file sao lưu: config.json + pikpak.db (bản mới) hoặc owned.json / history.json (bản cũ).
+    Dữ liệu hiện tại được giữ lại dạng *.bak. Trả về danh sách mục đã khôi phục."""
+    import tempfile
+    import zipfile
+    done = []
+    with tempfile.TemporaryDirectory() as td, zipfile.ZipFile(path) as z:
+        names = [n for n in z.namelist() if n in BACKUP_FILES]
+        if not names:
+            raise ValueError("File không phải bản sao lưu của tool.")
+        for n in names:
+            z.extract(n, td)
+        if "config.json" in names:
+            if CONFIG_FILE.is_file():
+                shutil.copy(CONFIG_FILE, str(CONFIG_FILE) + ".bak")
+            shutil.copy(os.path.join(td, "config.json"), CONFIG_FILE)
+            done.append("config.json")
+        if DB_FILE.is_file():
+            store().backup_to(str(DB_FILE) + ".bak")
+        if "pikpak.db" in names:
+            store().restore_from(os.path.join(td, "pikpak.db"))
+            done.append("pikpak.db")
+        elif any(n in names for n in ("owned.json", "history.json")):
+            st = store()
+            for n, t in (("owned.json", "owned"), ("history.json", "history")):
+                if n in names:
+                    data = load_json(os.path.join(td, n), {})
+                    if isinstance(data, dict):
+                        st.replace(t, data)
+                        done.append(n)
+    return done
+
+
 def to_date(value):
     if value in (None, "", 0, "0"):
         return None
@@ -641,13 +900,15 @@ def dec_secret(text):
 
 
 def make_backup_zip(dest):
-    """Nén các file dữ liệu quan trọng vào 1 file zip."""
+    """Nén dữ liệu quan trọng vào 1 file zip: config.json + pikpak.db (bản sao nhất quán)."""
+    import tempfile
     import zipfile
-    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
-        for name in BACKUP_FILES:
-            fp = DATA_DIR / name
-            if fp.is_file():
-                z.write(fp, name)
+    with tempfile.TemporaryDirectory() as td, zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
+        if CONFIG_FILE.is_file():
+            z.write(CONFIG_FILE, "config.json")
+        snap = os.path.join(td, "pikpak.db")
+        store().backup_to(snap)
+        z.write(snap, "pikpak.db")
         z.comment = f"{APP_NAME} | {MACHINE} | {dt.datetime.now():%Y-%m-%d %H:%M}".encode("utf-8")
     return dest
 
@@ -1916,16 +2177,14 @@ class App(tk.Tk):
         self.tray = None
         self.next_auto_ts = None
         self._tray_hint_shown = False
-        self.history = load_json(HISTORY_FILE, {})
+        self.history = store().load("history")
         for h in self.history.values():          # lần trước tắt giữa chừng -> cho tải lại
             if h.get("status") in WATCH_STATUSES:
                 h["status"] = STATUS_FAIL
         self.item_meta = {}                      # mã file -> thông tin nguồn (đường dẫn / id chia sẻ)
         self.present_codes, self.sub_of = set(), {}
         self._subs_open = set()
-        self.owned = load_json(OWNED_FILE, None)
-        if not isinstance(self.owned, dict):
-            self.owned = self._migrate_owned()
+        self.owned = store().load("owned")
         self.auto_var = tk.BooleanVar(value=bool(self.cfg.get("auto_scan", False)))
         self.interval_var = tk.StringVar(value=str(self.cfg.get("auto_interval", 60)))
         self.last_summary = ""
@@ -2011,10 +2270,8 @@ class App(tk.Tk):
 
     # ================================================================ DANH SÁCH ĐÃ CÓ
     def _migrate_owned(self):
-        """Lần đầu dùng v4: chuyển các tập 'Xong' trong lịch sử cũ sang Danh sách đã có."""
-        owned = {}
-        save_json(OWNED_FILE, owned)
-        return owned
+        """(cũ) Danh sách đã có rỗng."""
+        return {}
 
     def note_listing(self, files):
         """Ghi nhớ mã file + thư mục con của danh sách vừa quét (dùng cho so khớp Danh sách đã có)."""
@@ -2065,7 +2322,8 @@ class App(tk.Tk):
             self.owned.pop(c, None)
 
     def save_owned(self):
-        save_json(OWNED_FILE, self.owned)
+        if not getattr(self, "_no_save", False):
+            store().save("owned", self.owned)
         self.update_stats()
 
     # ================================================================ GIAO DIỆN CHUNG
@@ -4536,11 +4794,7 @@ class App(tk.Tk):
                     line = f"{dt.datetime.now():%H:%M:%S}  {msg[1]}"
                     self.log_lines.append(line)
                     self.log_box.insert("end", line + "\n"); self.log_box.see("end")
-                    try:
-                        with open(LOG_FILE, "a", encoding="utf-8") as fh:
-                            fh.write(f"{dt.datetime.now():%Y-%m-%d} {line}\n")
-                    except OSError:
-                        pass
+                    write_log(msg[1])
                 elif kind == "status":
                     self.status_var.set(msg[1])
                 elif kind == "progress":
@@ -7599,10 +7853,7 @@ class App(tk.Tk):
                                                      f"Gồm: {', '.join(names)}\n\nDữ liệu hiện tại sẽ được giữ lại "
                                                      "dạng *.bak. Tool sẽ tự khởi động lại."):
                     return
-                for n in names:
-                    if (DATA_DIR / n).is_file():
-                        shutil.copy(DATA_DIR / n, DATA_DIR / (n + ".bak"))
-                    z.extract(n, DATA_DIR)
+            restore_backup_zip(path)
         except Exception as e:
             messagebox.showerror(APP_NAME, f"Không khôi phục được: {e}")
             return
@@ -8418,7 +8669,8 @@ class App(tk.Tk):
             self.status_var.set("Chưa có đường dẫn file (tập chưa tải xong hoặc đã bị chuyển/xóa).")
 
     def save_history(self):
-        save_json(HISTORY_FILE, self.history)
+        if not getattr(self, "_no_save", False):
+            store().save("history", self.history)
 
     def history_delete(self):
         sel = self.hist_tree.selection()
@@ -8641,11 +8893,7 @@ def start_web_ui():
         return bool(pikpak_web.run_web(sys.argv))
     except Exception as e:
         globals()["WEB_FAIL"] = f"Không mở được giao diện web: {e!r} - đang dùng giao diện cũ."
-        try:
-            with open(LOG_FILE, "a", encoding="utf-8") as fh:
-                fh.write(f"{dt.datetime.now():%Y-%m-%d %H:%M:%S}  Không mở được giao diện web: {e!r} - dùng giao diện cũ\n")
-        except OSError:
-            pass
+        write_log(f"Không mở được giao diện web: {e!r} - dùng giao diện cũ")
         return False
 
 
