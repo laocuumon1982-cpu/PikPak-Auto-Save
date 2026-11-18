@@ -41,13 +41,22 @@ def web_dir():
     raise FileNotFoundError("Không thấy thư mục giao diện 'web' (web/index.html)")
 
 
-def page_html():
-    """index.html với style.css và app.js nhúng thẳng vào (cửa sổ app nạp trang bằng chuỗi HTML)."""
+def page_html(remote=False):
+    """index.html với style.css và app.js nhúng thẳng vào (cửa sổ app nạp trang bằng chuỗi HTML).
+    remote=True: trang cho iPhone / iPad (điều khiển từ xa) - thêm thẻ "Thêm vào MH chính"."""
     d = web_dir()
     html = (d / "index.html").read_text(encoding="utf-8")
     css = (d / "style.css").read_text(encoding="utf-8")
     js = (d / "app.js").read_text(encoding="utf-8")
     html = html.replace('<link rel="stylesheet" href="style.css">', "<style>\n" + css + "\n</style>")
+    html = html.replace('content="width=device-width, initial-scale=1"', 'content="width=device-width, initial-scale=1, viewport-fit=cover"')
+    if remote:
+        html = html.replace("</head>", '<meta name="apple-mobile-web-app-capable" content="yes">\n'
+                            '<meta name="mobile-web-app-capable" content="yes">\n'
+                            '<meta name="apple-mobile-web-app-title" content="PikPak">\n'
+                            '<meta name="apple-mobile-web-app-status-bar-style" content="default">\n'
+                            '<link rel="apple-touch-icon" href="/icon.png"><link rel="manifest" href="/manifest.webmanifest">\n'
+                            "<script>window.REMOTE = true;</script>\n</head>", 1)
     return html.replace('<script src="app.js"></script>', "<script>\n" + js.replace("</script", "<\\/script") + "\n</script>")
 
 
@@ -1186,7 +1195,7 @@ class Engine:
                     "extensions": str, "health_check": bool, "stale_days": int, "auto_scan": bool, "auto_interval": int,
                     "start_with_windows": bool, "startup_scan": bool, "tray_on_close": bool, "notify": bool,
                     "admin_lock_min": int, "update_check": bool, "update_repo": str, "backup_on": bool,
-                    "pikpak_root": str}
+                    "pikpak_root": str, "remote_tray": bool}
 
     def get_settings(self):
         c = self.cfg
@@ -1196,7 +1205,7 @@ class Engine:
                    admin_lock_min=int(c.get("admin_lock_min", 10) or 0), tray_on_close=c.get("tray_on_close", True),
                    notify=c.get("notify", True), iphone_on=c.get("iphone_on", True), health_check=c.get("health_check", True),
                    startup_scan=c.get("startup_scan", True), backup_on=c.get("backup_on", True),
-                   update_check=c.get("update_check", True), bwlimit=str(c.get("bwlimit", "") or ""))
+                   update_check=c.get("update_check", True), remote_tray=c.get("remote_tray", True), bwlimit=str(c.get("bwlimit", "") or ""))
         profs = []
         for name, p in sorted(c.get("profiles", {}).items(), key=lambda kv: -kv[1].get("updated", 0)):
             profs.append({"name": name, "me": name == MACHINE, "paths": f"COPY_TO_IPHONE: {p.get('iphone_dir') or '-'}",
@@ -1961,6 +1970,21 @@ class Api:
             return ""
         return self._eng.update_apply(p)
 
+    # ----- điều khiển từ iPhone / iPad
+    def remote_info(self):
+        r = getattr(self._eng, "remote", None)
+        return r.info() if r else {"error": "không có"}
+
+    def remote_set(self, on, pin, port):
+        r = getattr(self._eng, "remote", None)
+        return r.set(on, pin, port) if r else "không có"
+
+    def remote_logout_all(self):
+        r = getattr(self._eng, "remote", None)
+        if r:
+            r.logout_all()
+        return ""
+
     def classic_ui(self):
         """Mở giao diện cũ (Tk) - dự phòng. Nhớ lựa chọn (mở lại vẫn là giao diện cũ cho tới khi chọn lại web)."""
         if self._eng.busy():
@@ -2027,6 +2051,7 @@ class AppWindow:
                 pystray.MenuItem("Quét & Tải ngay", lambda: self.eng.start_scan(True, auto=True)),
                 pystray.MenuItem(lambda item: "Tắt tự quét" if self.eng.cfg.get("auto_scan") else "Bật tự quét",
                                  lambda: self.eng.set_auto(not self.eng.cfg.get("auto_scan"))),
+                pystray.MenuItem("📱 Điều khiển từ iPhone / iPad...", lambda: self.open_phone()),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Thoát", lambda: self.quit()))
             self.tray = pystray.Icon("PikPakShare", img, APP_NAME, menu)
@@ -2036,6 +2061,26 @@ class AppWindow:
         except Exception as e:              # noqa: BLE001
             self.tray = None
             self.eng.log(f"Không tạo được biểu tượng khay: {e}")
+
+    def open_phone(self):
+        """Mở cửa sổ ở Cài đặt › iPhone / iPad."""
+        self.show()
+        try:
+            self.win.evaluate_js("window.openPhone && openPhone()")
+        except Exception:                   # noqa: BLE001
+            pass
+
+    def on_phone_active(self, ip):
+        """iPhone / iPad bắt đầu điều khiển -> thu cửa sổ PC xuống khay hệ thống (nếu bật trong Cài đặt)."""
+        if self.quitting or not self.tray or not self.eng.cfg.get("remote_tray", True):
+            return
+        try:
+            self._remember()
+            self.win.hide()
+            self.eng.notify(APP_TITLE, f"📱 Đang điều khiển từ iPhone / iPad ({ip}) - tool thu xuống khay hệ thống. "
+                                       "Nhấp đúp biểu tượng để mở lại.")
+        except Exception:                   # noqa: BLE001
+            pass
 
     def show(self):
         try:
@@ -2183,6 +2228,24 @@ class AppWindow:
                 im.save(str(BASE / f"{name}.jpg"), quality=72)
         except Exception as e:              # noqa: BLE001
             res["shot_error"] = str(e)
+        res["web_module"] = Path(__file__).parent.name
+        if os.environ.get("PK_SELFTEST_REMOTE") and getattr(self.eng, "remote", None):
+            try:                            # thử điều khiển từ xa: bật, đăng nhập PIN, gọi api state
+                import urllib.request
+                import http.cookiejar
+                rs = self.eng.remote
+                res["remote_set"] = rs.set(True, "2468", 8686) or "ok"
+                op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+                base = "http://127.0.0.1:8686"
+                res["remote_page"] = len(op.open(base + "/", timeout=10).read())
+                r = op.open(urllib.request.Request(base + "/login", b'{"pin":"2468"}', method="POST"), timeout=10)
+                res["remote_login"] = json.loads(r.read()).get("ok")
+                r = op.open(urllib.request.Request(base + "/api/state", b"[0,0,0]", method="POST"), timeout=10)
+                st = json.loads(r.read())
+                res["remote_state"] = sorted(st)[:6] if isinstance(st, dict) else str(st)[:80]
+                res["remote_urls"] = len(rs.info().get("urls") or [])
+            except Exception as e:          # noqa: BLE001
+                res["remote_error"] = repr(e)
         (BASE / "selftest.txt").write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")
         self.quit()
 
@@ -2243,6 +2306,7 @@ def serve(eng, port=0, open_browser=True):
                 return self._send(500, json.dumps({"error": str(e)}), "application/json")
             self._send(200, json.dumps(res, ensure_ascii=False), "application/json; charset=utf-8")
 
+    _start_remote(eng, api)
     srv = ThreadingHTTPServer(("127.0.0.1", port), H)
     url = f"http://127.0.0.1:{srv.server_address[1]}/"
     print("Giao diện:", url, flush=True)
@@ -2251,6 +2315,17 @@ def serve(eng, port=0, open_browser=True):
         webbrowser.open(url)
     eng.quit_fn = lambda: os._exit(0)
     srv.serve_forever()
+
+
+def _start_remote(eng, api):
+    """Máy chủ điều khiển từ iPhone / iPad (chỉ chạy khi đã bật trong Cài đặt và đã đặt PIN)."""
+    try:
+        import pikpak_remote
+        eng.remote = pikpak_remote.RemoteServer(eng, api, page_html)
+        eng.remote.start()
+    except Exception as e:                  # noqa: BLE001
+        eng.remote = None
+        eng.log(f"⚠ Không bật được điều khiển từ iPhone/iPad: {e}")
 
 
 def run_web(argv=None):
@@ -2271,6 +2346,8 @@ def run_web(argv=None):
         return False
     eng = Engine()
     w = AppWindow(eng, startup="--startup" in argv)
+    eng.on_phone_active = w.on_phone_active
+    _start_remote(eng, Api(eng, w))
     if "--auto" in argv:
         threading.Timer(1.5, lambda: eng.start_scan(True)).start()
     try:

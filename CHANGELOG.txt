@@ -1,6 +1,16 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v3.3  (18/11/2026)
+  - ĐIỀU KHIỂN TỪ IPHONE / IPAD qua Wi-Fi nhà: tool trên PC mở 1 trang web có mã PIN, iPhone / iPad mở bằng Safari
+    (quét mã QR) và "Thêm vào MH chính" để dùng như 1 app. Xem đèn, Quét & Tải, chọn tải, lịch sử, thư mục phim,
+    cài đặt. Phim vẫn tải về HDD của PC. Giao diện riêng cho màn hình nhỏ: thanh tab dưới, cột đèn trượt ra.
+    · Bật ở: nút "📱 iPhone" trên thanh tiêu đề / Cài đặt -> tab "📱 iPhone / iPad" / menu icon ở khay đồng hồ.
+    · Bảo mật: mã PIN (mã hóa), mỗi thiết bị có phiên riêng, sai 5 lần phải đợi 1 phút, "Đăng xuất mọi thiết bị";
+      tab Thư mục phim / Cài đặt vẫn cần mật khẩu admin (mở khóa riêng trên từng thiết bị).
+    · Khi iPhone / iPad bắt đầu điều khiển, tool trên PC tự thu nhỏ xuống khay hệ thống (tắt được trong Cài đặt).
+  - Đã dùng bản thử "PikPak Auto Save (thu iPhone-iPad).exe": xóa file đó, dùng "PikPak Auto Save.exe" (cài đặt PIN giữ nguyên).
+
 v3.2  (12/11/2026)
   - Cài đặt → Máy này & Sao lưu: mục sao lưu đổi thành "Sao lưu Dữ liệu (SQLite): pikpak.db và config.json"
     (mô tả đúng những gì được sao lưu từ v3.1).

@@ -44,7 +44,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v3.2 by Duy Anh"
+APP_VERSION = "v3.3 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -8887,7 +8887,14 @@ def start_web_ui():
         me = types.ModuleType("auto_download_pikpak_share")
         me.__dict__.update(globals())
     sys.modules["auto_download_pikpak_share"] = me
-    if (BASE / "pikpak_web.py").is_file() and str(BASE) not in sys.path:
+    # Chỉ dùng pikpak_web.py / pikpak_remote.py cạnh exe khi đang chạy code .py cạnh exe (bản Python, hoặc exe cũ
+    # chạy code mới sau Cập nhật). Exe tự chạy code đóng gói của nó thì dùng đúng module đóng gói - tránh lấy nhầm
+    # pikpak_web.py CŨ hơn nằm cạnh exe (VD chép exe mới vào thư mục bản cũ -> mất tính năng mới).
+    try:
+        here = Path(globals().get("__file__") or "").resolve().parent == BASE.resolve()
+    except Exception:
+        here = False
+    if here and (BASE / "pikpak_web.py").is_file() and str(BASE) not in sys.path:
         sys.path.insert(0, str(BASE))
     try:
         import pikpak_web

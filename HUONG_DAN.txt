@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v3.2 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v3.3 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -25,6 +25,20 @@ LẦN ĐẦU
         - Đích 2 · HDD: bấm "Chọn..." chọn thư mục lưu trên ổ cứng
    5. Bấm "Quét file" ở thư mục vừa thêm -> đánh dấu tập ĐÃ CÓ (không cần tải) -> Lưu.
    6. Tab Quét & Tải -> "Quét & Tải". Bật "Tự quét mỗi ... phút" để tool tự làm.
+
+ĐIỀU KHIỂN TỪ IPHONE / IPAD (v3.3)
+   Tool trên PC vẫn làm mọi việc (quét, Save My PikPak, rclone tải về HDD); iPhone / iPad điều khiển qua Wi-Fi nhà.
+   1. Trên PC bấm nút "📱 iPhone" trên thanh tiêu đề (hoặc Cài đặt -> tab "📱 iPhone / iPad", hoặc chuột phải icon ở
+      khay đồng hồ -> "Điều khiển từ iPhone / iPad..."). Tích "Bật", nhập mã PIN 4-8 chữ số -> "✓ Áp dụng".
+      Windows hỏi cho phép qua tường lửa -> cho phép (mạng Riêng tư / Private). Hiện địa chỉ + mã QR.
+   2. iPhone / iPad cùng Wi-Fi: mở Camera quét mã QR (hoặc Safari gõ địa chỉ, VD http://192.168.1.10:8686) -> nhập PIN.
+      Bấm Chia sẻ -> "Thêm vào MH chính" để có biểu tượng PikPak như 1 app.
+   3. Khi iPhone / iPad bắt đầu điều khiển, tool trên PC tự thu nhỏ xuống khay hệ thống (góc phải cạnh đồng hồ), vẫn
+      quét & tải bình thường. Nhấp đúp icon ở khay để mở lại. Tắt tính năng này: tab "📱 iPhone / iPad" -> bỏ tích -> Lưu.
+   4. Tab Thư mục phim / Cài đặt trên iPhone vẫn cần mật khẩu admin (tạo trên PC trước).
+      Chỉ làm trên PC: hộp chọn thư mục, mở thư mục / file, sao lưu / khôi phục bằng file, xuất / nhập danh sách,
+      chẩn đoán, đổi mật khẩu admin, bật / tắt điều khiển từ xa.
+   5. Quên PIN: đặt lại trên PC. "Đăng xuất mọi thiết bị" để mọi iPhone / iPad phải nhập PIN lại.
 
 MẸO
    - Mật khẩu admin: tab Thư mục phim / Cài đặt cần mật khẩu (tạo ở lần đầu bấm vào). "🔒 Khóa lại" trên thanh
