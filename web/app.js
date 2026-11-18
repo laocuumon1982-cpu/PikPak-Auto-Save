@@ -8,9 +8,21 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
 const led = (st, cls = "") => `<span class="led ${st} ${cls}"><i></i></span>`;
+const REMOTE = !!window.REMOTE;            // đang mở từ iPhone / iPad (điều khiển PC từ xa)
+if (REMOTE) document.body.classList.add("remote");
 function api(name, ...args) {
   if (window.pywebview && window.pywebview.api && window.pywebview.api[name]) return window.pywebview.api[name](...args);
-  return fetch("/api/" + name, {method: "POST", body: JSON.stringify(args)}).then(r => r.json());
+  return fetch("/api/" + name, {method: "POST", body: JSON.stringify(args), credentials: "same-origin"}).then(r => {
+    if (r.status === 401) { location.reload(); return new Promise(() => {}); }
+    return r.json();
+  });
+}
+function openUrl(u) { if (!u) return; if (REMOTE) window.open(u, "_blank"); else api("open_url", u); }
+function copyLocal(text) {                  // iPhone (http) không có navigator.clipboard -> dùng ô chữ tạm
+  const t = document.createElement("textarea"); t.value = text; t.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+  document.body.appendChild(t); t.focus(); t.select(); t.setSelectionRange(0, text.length);
+  let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  t.remove(); return ok;
 }
 
 /* ---------------------------------------------------------------- thông báo nhỏ + hộp thoại */
@@ -92,6 +104,7 @@ function showPage(p, locked) {
   if (page === "folders" && p !== "folders" && fpChanges() && !locked) fpAskSave();
   page = p;
   document.querySelectorAll(".nav").forEach(n => n.classList.toggle("on", n.dataset.p === p));
+  document.querySelectorAll("#tabbar [data-p]").forEach(n => n.classList.toggle("on", n.dataset.p === p));
   document.querySelectorAll(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + (locked ? "locked" : p)));
   $("ptitle").textContent = PAGES[p][0];
   $("psub").textContent = PAGES[p][1];
@@ -100,7 +113,11 @@ function showPage(p, locked) {
   if (p === "folders" && !locked) { foldersVer = -1; }
   api("ui_set", "page", p);
 }
-document.querySelectorAll(".nav").forEach(n => n.onclick = () => go(n.dataset.p));
+document.querySelectorAll(".nav").forEach(n => n.onclick = () => { drawer(false); go(n.dataset.p); });
+function drawer(open) { $("side").classList.toggle("open", open); $("scrim").classList.toggle("on", open); }
+$("mMenu").onclick = () => drawer(true);
+$("scrim").onclick = () => drawer(false);
+document.querySelectorAll("#tabbar [data-p]").forEach(t => t.onclick = () => t.dataset.p === "leds" ? drawer(!$("side").classList.contains("open")) : (drawer(false), go(t.dataset.p)));
 $("lkOpen").onclick = () => go(page);
 async function unlock() {
   if (S.admin.unlocked) return true;
@@ -140,11 +157,11 @@ let lastPing = 0;
 $("fold").onclick = () => { $("side").classList.toggle("mini"); $("fold").textContent = $("side").classList.contains("mini") ? "»" : "«";
   api("ui_set", "mini", $("side").classList.contains("mini")); };
 $("bTheme").onclick = e => popMenu(e.currentTarget, [
-  {text: "☀ Sáng", do: () => setDark(false)}, {text: "☾ Tối", do: () => setDark(true)}, "-",
+  {text: "☀ Sáng", do: () => setDark(false)}, {text: "☾ Tối", do: () => setDark(true)}].concat(REMOTE ? [] : ["-",
   {text: "▣ Mở giao diện cũ (bản Tk)", do: async () => {
     if (await confirmBox("Giao diện cũ", "Tool sẽ khởi động lại bằng giao diện cũ (bản Tk).\nMuốn quay lại: trong giao diện cũ vào Cài đặt → Chung → bấm \"🌐 Dùng giao diện web\".", "Khởi động lại"))
       api("classic_ui").then(m => m && toast(m, "err"));
-  }}]);
+  }}]));
 function setDark(on) { document.body.classList.toggle("dark", on); api("ui_set", "dark", on); }
 
 /* ---------------------------------------------------------------- bảng đèn trạng thái */
@@ -158,7 +175,7 @@ for (const k in FIX) { const b = $("t-" + k).querySelector(".fix"); b.onclick = 
 $("t-pk").onclick = () => openSettings("pikpak");
 $("t-rc").onclick = () => openSettings("rclone");
 $("t-auto").onclick = () => setAuto(!S.auto.on);
-$("t-dl").onclick = () => go("scan");
+$("t-dl").onclick = () => { drawer(false); go("scan"); };
 $("t-bk").onclick = () => openSettings("machine");
 $("t-err").onclick = () => viewReport();
 $("aint").onchange = () => setAuto(S.auto.on, +$("aint").value);
@@ -169,10 +186,16 @@ function setAuto(on, minutes) {
 async function viewReport() {
   const r = await api("report_latest", true);
   if (r.error) return toast(r.error);
+  if (REMOTE) return dialog({title: "Báo cáo lỗi " + r.name, width: 760,
+    body: `<textarea id="rt" readonly style="width:100%;height:55vh;font-family:Consolas,monospace;font-size:12px">${esc(r.text)}</textarea>`,
+    buttons: [{text: "Đóng", value: null}, {text: "⧉ Copy để dán cho Claude", cls: "red", click: c => {
+      const ok = copyLocal(r.text); if (!ok) { const t = c.q("#rt"); t.focus(); t.select(); }
+      toast(ok ? "Đã copy báo cáo lỗi." : "Đã chọn hết chữ - bấm Copy trên menu của iPhone."); return false; }}]});
   if (r.copied) toast(`Đã mở và COPY báo cáo ${r.name} - dán (Ctrl+V) vào Claude để sửa.`);
   else { try { await navigator.clipboard.writeText(r.text); toast(`Đã copy báo cáo ${r.name}.`); } catch (e) { toast(`Đã mở báo cáo ${r.name}.`); } }
 }
 async function openSettings(sub, then) {
+  drawer(false);
   await go("settings");
   if (page !== "settings" || !S.admin.unlocked) return;
   setSeg(sub);
@@ -261,25 +284,26 @@ function renderFolders() {
 }
 $("fq").oninput = renderFolders;
 $("cards").onclick = async e => {
-  const u = e.target.closest("[data-u]"); if (u) return api("open_url", u.dataset.u);
+  const u = e.target.closest("[data-u]"); if (u) return openUrl(u.dataset.u);
   const a = e.target.closest("[data-a]"); if (!a) return;
   const card = e.target.closest(".fcard"), i = +card.dataset.i, f = folders.find(x => x.i === i);
   const act = a.dataset.a;
   if (act === "toggle") api("folder_toggle", i).then(m => m && toast(m));
-  else if (act === "link") api("folder_open_source", i);
+  else if (act === "link") openSource(i);
   else if (act === "subs") { subsOpen.has(f.id) ? subsOpen.delete(f.id) : subsOpen.add(f.id); renderFolders(); }
   else if (act === "ack") api("folder_ack_gaps", i);
   else if (act === "files") fpScan(i);
   else if (act === "dl") { api("scan", true, [f.id]).then(m => m ? toast(m, "err") : (go("scan"), toast(`Đang quét & tải: ${f.name}`))); }
   else if (act === "edit") folderDialog(i);
   else if (act === "more") popMenu(a, [
-    {text: "↗ Mở thư mục nguồn", do: () => api("folder_open_source", i)},
-    {text: "⚕ Chẩn đoán (xuất danh sách file + lý do bỏ qua)...", do: () => { api("folder_diagnose", i); toast(`Đang chẩn đoán ${f.name}... xong sẽ tự mở file kết quả.`); }},
+    {text: "↗ Mở thư mục nguồn", do: () => openSource(i)}].concat(REMOTE ? [] : [
+    {text: "⚕ Chẩn đoán (xuất danh sách file + lý do bỏ qua)...", do: () => { api("folder_diagnose", i); toast(`Đang chẩn đoán ${f.name}... xong sẽ tự mở file kết quả.`); }}]).concat([
     "-", {text: "▲ Đưa lên trên", do: () => api("folder_move", i, -1)}, {text: "▼ Đưa xuống dưới", do: () => api("folder_move", i, 1)},
     "-", {text: "✕ Xóa thư mục", cls: "dang", do: async () => {
       if (await confirmBox("Xóa thư mục phim", `Xóa thư mục "${f.name}" khỏi danh sách?\n(Danh sách file đã có của thư mục vẫn được giữ.)`, "✕ Xóa"))
-        api("folder_delete", i).then(m => m && toast(m)); }}]);
+        api("folder_delete", i).then(m => m && toast(m)); }}]));
 };
+async function openSource(i) { const r = await api("folder_open_source", i); if (r && r.url) openUrl(r.url); }
 $("fAdd").onclick = () => folderDialog(-1);
 $("fBulk").onclick = () => dialog({title: "Dán nhiều nguồn", width: 720,
   body: `<div class="msg" style="color:var(--muted)">Mỗi dòng 1 nguồn (link chia sẻ PikPak, có thể kèm mã thư mục con). Có thể ghi tên trước:   Tên phim | https://mypikpak.com/s/...</div>
@@ -289,10 +313,10 @@ $("fBulk").onclick = () => dialog({title: "Dán nhiều nguồn", width: 720,
     const n = await api("folder_bulk", c.q("#bt").value); toast(n < 0 ? "Tab đang khóa." : `Đã thêm ${n} thư mục.`); }}]});
 $("fMore").onclick = e => popMenu(e.currentTarget, [
   {text: "☑ Chọn quét tất cả thư mục", do: () => api("folder_check_all", true)},
-  {text: "☐ Bỏ quét tất cả thư mục", do: () => api("folder_check_all", false)}, "-",
+  {text: "☐ Bỏ quét tất cả thư mục", do: () => api("folder_check_all", false)}].concat(REMOTE ? [] : ["-",
   {text: "⇩ Xuất danh sách thư mục...", do: async () => { const r = await api("folder_export"); if (r.path) toast(`Đã xuất ${r.n} thư mục: ${r.path}`); }},
   {text: "⇧ Nhập danh sách thư mục...", do: async () => { const r = await api("folder_import");
-    if (r.error) toast(r.error, "err"); else if (r.added !== undefined) toast(`Đã thêm ${r.added} thư mục, bỏ qua ${r.skipped} thư mục đã có.`); }}]);
+    if (r.error) toast(r.error, "err"); else if (r.added !== undefined) toast(`Đã thêm ${r.added} thư mục, bỏ qua ${r.skipped} thư mục đã có.`); }}]));
 
 async function folderDialog(i) {
   const d = await api("folder_get", i);
@@ -307,7 +331,7 @@ async function folderDialog(i) {
       <div class="fr" style="align-items:flex-start"><label><b>Ghi chú</b></label><textarea id="d-note" class="w" style="height:58px">${esc(d.note)}</textarea></div>
       <div class="sec" style="margin:10px 0 0;padding:10px 14px;box-shadow:none"><h4>Đích đến</h4>
       <div class="fr"><label><b>Đích 1 · My PikPak *</b><br><small style="color:var(--muted)">Save trước tiên (trên máy chủ)</small></label><input id="d-pk" value="${esc(d.pikpak_dir)}"><button class="btn sm" id="d-pkb">Chọn...</button></div>
-      <div class="fr"><label><b>Đích 2 · HDD *</b><br><small style="color:var(--muted)">Tải từ My PikPak về PC</small></label><input id="d-hdd" value="${esc(d.local_dir)}"><button class="btn sm" id="d-hddb">Chọn...</button></div>
+      <div class="fr"><label><b>Đích 2 · HDD *</b><br><small style="color:var(--muted)">Tải từ My PikPak về PC</small></label><input id="d-hdd" value="${esc(d.local_dir)}"><button class="btn sm pc-only" id="d-hddb">Chọn...</button></div>
       <div class="hint">Link chia sẻ → ① Save vào My PikPak → ② rclone tải từ My PikPak về HDD</div>
       <label class="ck" style="margin-left:230px"><input type="checkbox" id="d-sub" ${d.sub_movie ? "checked" : ""}> Tạo thư mục con theo tên phim ở đích (VD ...\\Tiên Nghịch\\ · My Pack/2026/Tiên Nghịch/)</label>
       <div class="preview" id="d-prev" style="margin-left:230px"></div></div>
@@ -344,7 +368,7 @@ async function folderDialog(i) {
       };
       c.q("#d-pkb").onclick = async () => { const p = await pikpakBrowser(c.q("#d-pk").value); if (p !== null) { c.q("#d-pk").value = p; prev(); } };
       c.q("#d-hddb").onclick = async () => { const p = await api("pick_folder", c.q("#d-hdd").value); if (p) { c.q("#d-hdd").value = p; prev(); } };
-      const o = c.q("#d-open"); if (o) o.onclick = () => api("open_url", d.link);
+      const o = c.q("#d-open"); if (o) o.onclick = () => openUrl(d.link);
     }});
 }
 
@@ -526,9 +550,17 @@ function renderSettings() {
   const S2 = SET, el = $("sets");
   if (seg === "gen") el.innerHTML = `
     <div class="sec"><h4>Giao diện</h4><div class="d">Giao diện web (nút nổi 3D, đèn LED). Chọn nền sáng hoặc tối. Máy không chạy được giao diện web sẽ tự dùng giao diện cũ.</div>
-      <div class="fr"><button class="btn" id="g-light">☀ Sáng</button><button class="btn" id="g-dark">☾ Tối</button><button class="btn" id="g-classic">▣ Mở giao diện cũ (bản Tk)</button></div></div>
+      <div class="fr"><button class="btn" id="g-light">☀ Sáng</button><button class="btn" id="g-dark">☾ Tối</button><button class="btn pc-only" id="g-classic">▣ Mở giao diện cũ (bản Tk)</button></div></div>
+    <div class="sec pc-only"><h4>📱 Điều khiển từ iPhone / iPad (thử nghiệm)</h4>
+      <div class="d">Bật lên, iPhone / iPad dùng chung Wi-Fi với máy này mở Safari vào địa chỉ bên dưới (hoặc quét mã QR bằng Camera), nhập mã PIN là điều khiển được tool: xem đèn, Quét &amp; Tải, lịch sử, thư mục phim, cài đặt. Phim vẫn tải về HDD của PC. Trong Safari bấm Chia sẻ → "Thêm vào MH chính" để mở như 1 app. Lần đầu bật, Windows có thể hỏi cho phép qua tường lửa: chọn cho phép (mạng Riêng tư / Private).</div>
+      <div class="fr"><label class="ck" style="width:auto"><input type="checkbox" id="rm-on"> Bật điều khiển từ iPhone / iPad</label></div>
+      <div class="fr"><label>Mã PIN (4-8 chữ số)</label><input id="rm-pin" inputmode="numeric" maxlength="8" style="width:170px;flex:none" placeholder="">
+        <span>Cổng</span><input id="rm-port" inputmode="numeric" style="width:90px;flex:none"><button class="btn red" id="rm-apply">✓ Áp dụng</button></div>
+      <div id="rm-box"></div></div>
+    <div class="sec remote-only"><h4>📱 Đang điều khiển từ xa</h4><div class="d">Bạn đang điều khiển tool trên máy <b>${esc(S2.machine)}</b> qua Wi-Fi. Một số việc (chọn thư mục bằng hộp thoại, mở thư mục, sao lưu ra file, đổi mật khẩu admin...) chỉ làm được trên PC. Thư mục HDD: gõ đường dẫn vào ô.</div>
+      <div class="fr"><button class="btn" id="rm-out">⎋ Đăng xuất thiết bị này</button></div></div>
     <div class="sec"><h4>Mật khẩu admin</h4><div class="d">Tab Thư mục phim và Cài đặt cần mật khẩu admin mới mở được (tránh bấm nhầm). Quên mật khẩu: tắt tool, mở Data\\config.json xóa 2 dòng "admin_hash" và "admin_salt" rồi mở lại tool.</div>
-      <div class="fr"><button class="btn" id="g-pw">🔑 Đổi mật khẩu admin</button><button class="btn" id="g-lock">🔒 Khóa ngay</button>
+      <div class="fr"><button class="btn pc-only" id="g-pw">🔑 Đổi mật khẩu admin</button><button class="btn" id="g-lock">🔒 Khóa ngay</button>
         <span style="margin-left:10px">Tự khóa sau</span>${sel2("admin_lock_min", [0, 5, 10, 15, 30, 60])}<span style="color:var(--muted)">phút không thao tác (0 = không tự khóa)</span></div></div>
     <div class="sec"><h4>Tự động</h4>
       <div class="fr">${ck("auto_scan", "Tự quét &amp; tải mỗi")}${sel2("auto_interval", S2.intervals)}<span>phút (tool phải đang mở hoặc chạy dưới khay)</span></div>
@@ -538,8 +570,8 @@ function renderSettings() {
       <div class="fr"><label>Link chia sẻ gốc</label>${inp("share_root")}<button class="btn sm" id="g-share">↗ Mở</button></div>
       <div class="hint">Link thư mục PikPak được chia sẻ cho bạn. Khi thêm thư mục phim, bấm "Chọn trong link chia sẻ..." để chọn thư mục con từ link này. Có mật khẩu: thêm ?pwd=xxxx vào cuối link.</div>
       ${ck("iphone_on", "Copy thêm 1 bản vào thư mục COPY_TO_IPHONE (mọi phim chung 1 thư mục)")}
-      <div class="fr"><button class="btn sm" id="g-ipc">📱 Copy các tập đã tải gần đây vào COPY_TO_IPHONE...</button><button class="btn sm" id="g-ipo">↗ Mở thư mục</button></div>
-      <div class="fr"><label>Thư mục COPY_TO_IPHONE</label>${inp("iphone_dir")}<button class="btn sm" id="g-ipb">Chọn...</button></div>
+      <div class="fr"><button class="btn sm" id="g-ipc">📱 Copy các tập đã tải gần đây vào COPY_TO_IPHONE...</button><button class="btn sm pc-only" id="g-ipo">↗ Mở thư mục</button></div>
+      <div class="fr"><label>Thư mục COPY_TO_IPHONE</label>${inp("iphone_dir")}<button class="btn sm pc-only" id="g-ipb">Chọn...</button></div>
       <div class="hint">Mỗi tập tải về HDD xong được copy thêm 1 bản vào đây để chép sang iPhone. File ở đây bạn tự xóa sau khi chép - tool không tải lại.</div>
       <div class="fr"><label>Giới hạn tốc độ</label>${inp("bwlimit", 'style="width:120px;flex:none"')}<span style="color:var(--muted)">VD 20M = 20 MB/s, 500K = 500 KB/s. Để trống = không giới hạn.</span></div>
       <div class="fr"><label>Nghỉ giữa 2 file (giây)</label><input data-k="delay" type="number" min="0" max="60" value="${S2.delay}" style="width:90px"></div>
@@ -560,7 +592,7 @@ function renderSettings() {
   else if (seg === "rclone") el.innerHTML = `
     <div class="sec"><h4>Trạng thái rclone</h4><div class="d">rclone dùng để lưu phim vào My PikPak và tải từ My PikPak về HDD. Không có rclone.exe thì tool tự tải về.</div>
       ${readoutHTML("ro-rc", [["state", "Trạng thái"], ["ver", "Phiên bản"], ["path", "File"], ["conf", "Cấu hình"], ["checked", "Kiểm tra lúc"]])}
-      <div class="fr" style="margin-top:10px"><button class="btn red shine" id="r-chk">⟳ Kiểm tra rclone</button><button class="btn" id="r-up">⬇ Tải lại / cập nhật rclone mới nhất</button><button class="btn" id="r-dir">▸ Mở thư mục tool</button></div></div>`;
+      <div class="fr" style="margin-top:10px"><button class="btn red shine" id="r-chk">⟳ Kiểm tra rclone</button><button class="btn" id="r-up">⬇ Tải lại / cập nhật rclone mới nhất</button><button class="btn pc-only" id="r-dir">▸ Mở thư mục tool</button></div></div>`;
   else el.innerHTML = `
     <div class="sec"><h4>Máy này: ${esc(S2.machine)}</h4><div class="d">Tool để trên ổ di động, cắm vào nhiều máy: mỗi máy tự nhớ đường dẫn riêng. Đường dẫn nằm trên chính ổ di động được lưu không phụ thuộc ký tự ổ.</div>
       <div class="tablewrap" style="flex:none;max-height:190px;margin-top:4px"><table class="ptable"><thead><tr><th style="width:40px"></th><th>MÁY</th><th>CẬP NHẬT</th><th>ĐƯỜNG DẪN</th></tr></thead>
@@ -569,19 +601,19 @@ function renderSettings() {
     <div class="sec"><h4 style="text-transform:none;font-size:13px">Sao lưu Dữ liệu (SQLite): pikpak.db và config.json</h4><div class="d">Phòng khi ổ cứng hỏng: <b>pikpak.db</b> (SQLite: Danh sách đã có, lịch sử tải, nhật ký) và <b>config.json</b> (thư mục phim, cài đặt) được nén và đưa lên ${esc(S2.backup_remote)}.</div>
       ${ck("backup_on", "Sau mỗi lần tải xong, tự sao lưu Dữ liệu (SQLite): pikpak.db và config.json lên PikPak")}
       <div class="fr"><button class="btn red shine" id="m-bk">☁ Sao lưu lên PikPak ngay</button><button class="btn" id="m-rpk">⟲ Khôi phục từ PikPak...</button>
-        <button class="btn" id="m-bf">⇩ Sao lưu ra file...</button><button class="btn" id="m-rf">⇧ Khôi phục từ file...</button></div>
+        <button class="btn pc-only" id="m-bf">⇩ Sao lưu ra file...</button><button class="btn pc-only" id="m-rf">⇧ Khôi phục từ file...</button></div>
       <div class="d">${S2.last_backup ? "✔ Lần sao lưu gần nhất: " + esc(S2.last_backup) : "Chưa sao lưu lần nào."}</div></div>
     <div class="sec"><h4>Dữ liệu (SQLite)</h4><div class="d">Danh sách đã có, lịch sử tải và nhật ký nằm chung trong 1 file database <b>pikpak.db</b> (SQLite): chỉ ghi phần thay đổi, mỗi lần ghi xong hẳn hoặc không đổi gì, tìm nhanh dù rất nhiều dòng. Cài đặt vẫn ở config.json (mở ra sửa tay được). Đồng bộ / sao lưu tay: chép 2 file pikpak.db + config.json trong thư mục Data. File JSON cũ (trước v3.1) được giữ trong Data\\_JSON_cu.</div>
       <div class="readout">${led("ok", "big")}<div class="rows"><b>File</b><span>${esc(S2.db.path)}</span><b>Dung lượng</b><span>${esc(S2.db.size)}</span>
         <b>Danh sách đã có</b><span>${S2.db.owned.toLocaleString("vi-VN")} tập</span><b>Lịch sử tải</b><span>${S2.db.history.toLocaleString("vi-VN")} tập</span>
         <b>Nhật ký</b><span>${S2.db.log.toLocaleString("vi-VN")} dòng</span></div></div>
-      <div class="fr" style="margin-top:10px"><button class="btn" id="m-data">▸ Mở thư mục Data</button><button class="btn" id="m-log">⇩ Xuất nhật ký ra file...</button></div></div>`;
+      <div class="fr" style="margin-top:10px"><button class="btn pc-only" id="m-data">▸ Mở thư mục Data</button><button class="btn pc-only" id="m-log">⇩ Xuất nhật ký ra file...</button></div></div>`;
   el.querySelectorAll("[data-k]").forEach(x => x.addEventListener(x.type === "checkbox" || x.tagName === "SELECT" ? "change" : "input", () => {
     SET[x.dataset.k] = x.type === "checkbox" ? x.checked : x.value; dirty = true; $("savebar").classList.add("isdirty"); }));
   const on = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
   on("g-light", () => setDark(false)); on("g-dark", () => setDark(true)); on("g-classic", () => $("bTheme").click());
   on("g-pw", changePw); on("g-lock", () => $("bLock").click());
-  on("g-share", () => api("open_url", SET.share_root));
+  on("g-share", () => openUrl(SET.share_root));
   on("g-ipo", () => api("open_iphone"));
   on("g-ipb", async () => { const p = await api("pick_folder", SET.iphone_dir); if (p) { SET.iphone_dir = p; dirty = true; $("savebar").classList.add("isdirty"); renderSettings(); } });
   on("g-ipc", async () => { const r = await api("iphone_preview");
@@ -604,9 +636,25 @@ function renderSettings() {
   on("m-rf", async () => restoreFlow(await api("restore_pick")));
   on("m-rpk", async () => { toast("Đang tải bản sao lưu từ PikPak..."); restoreFlow(await api("restore_fetch_pikpak")); });
   on("m-data", () => api("open_data"));
+  if (seg === "gen" && !REMOTE) remotePaint();
+  on("rm-apply", async () => { const m = await api("remote_set", $("rm-on").checked, $("rm-pin").value.trim(), $("rm-port").value.trim());
+    if (m) toast(m, "err"); else { toast($("rm-on").checked ? "📱 Đã bật điều khiển từ iPhone / iPad." : "Đã tắt điều khiển từ iPhone / iPad."); $("rm-pin").value = ""; } remotePaint(); });
+  on("rm-out", async () => { if (await confirmBox("Đăng xuất", "Đăng xuất thiết bị này? Lần sau mở lại phải nhập mã PIN.", "⎋ Đăng xuất")) {
+    await fetch("/logout", {method: "POST", credentials: "same-origin"}); location.reload(); } });
   on("m-log", () => api("export_log").then(m => toast(m)));
   if (seg === "pikpak") pkCheck();
   if (seg === "rclone") rcCheck();
+}
+async function remotePaint() {
+  const r = await api("remote_info"); if (!$("rm-box")) return;
+  $("rm-on").checked = r.on; $("rm-port").value = r.port; $("rm-pin").placeholder = r.has_pin ? "đã đặt - gõ để đổi" : "chưa đặt";
+  $("rm-box").innerHTML = r.running ? `<div class="readout" style="align-items:center">${led("ok", "big")}
+      <div class="rows"><b>Trạng thái</b><span>Đang mở · cổng ${r.port}</span><b>Địa chỉ</b><span>${r.urls.map(u => `<div>${esc(u)}</div>`).join("")}</span>
+        <b>Thiết bị</b><span>${r.devices} thiết bị đã đăng nhập</span></div>
+      <div style="background:#fff;padding:6px;border-radius:10px;flex:none;line-height:0">${r.qr.replace(/width="\d+" height="\d+"/, 'width="150" height="150"')}</div></div>
+      <div class="fr" style="margin-top:8px"><button class="btn out" id="rm-lo">⎋ Đăng xuất mọi thiết bị</button><span style="color:var(--muted)">Mở Camera của iPhone, quét mã QR, nhập mã PIN.</span></div>`
+    : (r.error ? `<div class="warnbox">⚠ ${esc(r.error)}</div>` : `<div class="d">${r.on ? "Đặt mã PIN rồi bấm Áp dụng." : "Đang tắt."}</div>`);
+  const lo = $("rm-lo"); if (lo) lo.onclick = async () => { if (await confirmBox("Đăng xuất mọi thiết bị", "Mọi iPhone / iPad đang đăng nhập sẽ phải nhập lại mã PIN.", "⎋ Đăng xuất")) { await api("remote_logout_all"); remotePaint(); } };
 }
 async function pkCheck() { fillReadout("ro-pk", {ok: null, state: "đang kiểm tra..."}); fillReadout("ro-pk", await api("pk_detail")); }
 async function rcCheck() { fillReadout("ro-rc", {ok: null, state: "đang kiểm tra..."}); fillReadout("ro-rc", await api("rclone_info")); }
@@ -652,7 +700,7 @@ async function updateDialog() {
       <div class="fr" style="margin-top:10px"><label style="width:160px">Nguồn (GitHub)</label><input id="u-repo" value="${esc(s.update_repo || "")}"></div>
       <label class="ck"><input type="checkbox" id="u-auto" ${s.update_check ? "checked" : ""}> Tự kiểm tra bản mới mỗi lần mở tool</label>
       <div class="msg" style="color:var(--muted);margin-top:6px">Có file PikPak-Auto-Save_Portable.zip / PikPak-Auto-Save_vX.Y.zip → bấm "Cập nhật từ file zip". Thư mục Data luôn được giữ nguyên.</div>`,
-    left: `<button class="btn" id="u-file">⇧ Cập nhật từ file zip...</button>`,
+    left: `<button class="btn pc-only" id="u-file">⇧ Cập nhật từ file zip...</button>`,
     buttons: [{text: "Đóng", value: null}, {text: "⟳ Kiểm tra trên GitHub", click: async c => {
       await api("set_update", c.q("#u-repo").value, c.q("#u-auto").checked); await api("check_update"); return false; }},
       {text: "⬇ Cập nhật ngay", cls: "red shine", click: async c => {
@@ -699,6 +747,7 @@ async function tick() {
     $("a1").textContent = n ? `Có ${n} mục cần xử lý` : "Mọi thứ hoạt động tốt";
     $("a2").textContent = n ? "Tool chưa tự tải được cho tới khi sửa · bấm để xem" : `Thư viện: ${s.lib.toLocaleString("vi-VN")} tập · Máy: ${s.machine}`;
     document.querySelectorAll(".nav .led").forEach(l => setLed(l, overall));
+    setLed($("tbLed"), overall); setLed($("mLed"), overall);
     badge("bd-scan", s.stats.new); badge("bd-history", s.stats.dl); badge("bd-folders", s.folder_err || s.unreviewed);
     $("bd-folders").classList.toggle("o", !s.folder_err);
     if (document.activeElement !== $("aint")) $("aint").value = String(s.auto.interval);

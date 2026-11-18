@@ -31,6 +31,7 @@
 
 <main class="main">
   <div class="top">
+    <button class="btn mmenu" id="mMenu" title="Bảng đèn trạng thái">☰ <span class="led sm ok" id="mLed"><i></i></span></button>
     <div><h1 id="ptitle">Quét &amp; Tải</h1><div class="sub" id="psub"></div></div>
     <div class="acts">
       <button class="btn" id="bTheme">◐ Giao diện</button>
@@ -125,7 +126,7 @@
       <button class="btn" id="hDone">✔ Đánh dấu Xong</button>
       <button class="btn" id="hUp">☁ Lưu lại vào My PikPak</button>
       <button class="btn" id="hRep">⧉ Copy báo cáo lỗi mới nhất</button>
-      <button class="btn" id="hRepDir">▸ Thư mục báo cáo</button>
+      <button class="btn pc-only" id="hRepDir">▸ Thư mục báo cáo</button>
       <button class="btn" id="hDel">↺ Xóa mục chọn (để tải lại)</button>
       <button class="btn out" id="hClear">✕ Xóa toàn bộ</button>
       <span class="cnt" id="hCount" style="margin-left:auto;color:var(--muted);font-weight:600"></span>
@@ -148,7 +149,7 @@
     <div class="sets" id="sets"></div>
     <div class="savebar" id="savebar">
       <button class="btn green" id="sSave">✓ Lưu cài đặt</button>
-      <button class="btn" id="sTest">◉ Thử thông báo</button>
+      <button class="btn pc-only" id="sTest">◉ Thử thông báo</button>
       <span class="dirty">● Có thay đổi chưa lưu</span>
     </div>
   </section>
@@ -165,6 +166,14 @@
   <div class="foot"><span id="status">Sẵn sàng.</span><div class="fb"><div id="fb"></div></div></div>
 </main>
 
+<div class="scrim" id="scrim"></div>
+<nav class="tabbar" id="tabbar">
+  <div data-p="folders"><span class="ic">▦</span>Thư mục</div>
+  <div data-p="scan"><span class="ic">⬇</span>Quét &amp; Tải</div>
+  <div data-p="history"><span class="ic">☰</span>Lịch sử</div>
+  <div data-p="settings"><span class="ic">⚙</span>Cài đặt</div>
+  <div data-p="leds"><span class="ic"><span class="led sm ok" id="tbLed"><i></i></span></span>Đèn</div>
+</nav>
 <div class="toast" id="toast"></div>
 <script src="app.js"></script>
 </body>

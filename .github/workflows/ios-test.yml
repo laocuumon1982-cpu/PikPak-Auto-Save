@@ -1,0 +1,45 @@
+# Bản THỬ điều khiển từ iPhone / iPad - chỉ chạy trên nhánh ios-remote, KHÔNG tạo Release, không ảnh hưởng nút Cập nhật.
+name: Build test iPhone-iPad remote
+on:
+  push:
+    branches: [ios-remote]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Cai thu vien
+        run: python -m pip install requests pystray pillow pywebview pyinstaller
+      - name: Dong goi exe
+        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name "PikPak Auto Save (thu iPhone-iPad)" --icon icon.ico --add-data "icon.ico;." --add-data "web;web" --hidden-import pikpak_web --hidden-import pikpak_remote --collect-all webview --collect-all pythonnet --collect-all clr_loader --hidden-import pystray._win32 auto_download_pikpak_share.py
+      - name: Chay thu exe (giao dien + dieu khien tu xa)
+        shell: pwsh
+        run: |
+          $d = "T_exe"
+          New-Item -ItemType Directory -Force $d | Out-Null
+          Copy-Item 'dist/PikPak Auto Save (thu iPhone-iPad).exe' $d/
+          $env:PK_SELFTEST_REMOTE = "1"
+          $p = Start-Process -FilePath "$d/PikPak Auto Save (thu iPhone-iPad).exe" -ArgumentList '--selftest' -PassThru
+          if (-not $p.WaitForExit(150000)) { Stop-Process -Id $p.Id -Force; Write-Host "qua 150s" }
+          if (Test-Path "$d/selftest.txt") { Write-Host "SELFTEST $(Get-Content $d/selftest.txt -Raw)" } else { Write-Host "KHONG CO selftest.txt" }
+          if (Test-Path "$d/Data/log.txt") { Get-Content "$d/Data/log.txt" -Tail 15 }
+          if (Test-Path "$d/selftest.jpg") {
+            $b = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$d/selftest.jpg"))
+            Write-Host "B64BEGIN_exe_selftest"
+            for ($i = 0; $i -lt $b.Length; $i += 4000) { Write-Host ("B64:" + $b.Substring($i, [Math]::Min(4000, $b.Length - $i))) }
+            Write-Host "B64END"
+          }
+      - name: Gom file
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item 'dist/PikPak Auto Save (thu iPhone-iPad).exe', HUONG_DAN_IPHONE_THU.txt out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PikPak-thu-iPhone-iPad-v3.2.1
+          path: out/
+          retention-days: 90

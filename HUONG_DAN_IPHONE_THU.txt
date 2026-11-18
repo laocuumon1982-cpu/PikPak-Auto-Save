@@ -1,0 +1,29 @@
+PIKPAK AUTO SAVE v3.2.1 - BẢN THỬ: ĐIỀU KHIỂN TỪ IPHONE / IPAD
+================================================================
+
+Bản thử KHÔNG đưa lên GitHub. Tool trên PC vẫn làm mọi việc (quét, Save My PikPak, rclone tải về HDD);
+iPhone / iPad chỉ điều khiển qua Wi-Fi.
+
+CÀI TRÊN PC
+  1. Tắt tool đang chạy (chuột phải icon ở khay đồng hồ -> Thoát).
+  2. Chép file "PikPak Auto Save (thu iPhone-iPad).exe" vào CÙNG thư mục với "PikPak Auto Save.exe"
+     (dùng chung thư mục Data). Chạy file bản thử. Không mở cùng lúc 2 bản.
+  3. Cài đặt -> Chung -> "Điều khiển từ iPhone / iPad": tích "Bật", nhập mã PIN 4-8 chữ số, bấm "Áp dụng".
+     Windows hỏi cho phép qua tường lửa -> chọn cho phép (mạng Riêng tư / Private).
+     Màn hình hiện địa chỉ (VD http://192.168.1.10:8686) và mã QR.
+
+TRÊN IPHONE / IPAD (cùng Wi-Fi với PC)
+  1. Mở Camera quét mã QR (hoặc mở Safari gõ địa chỉ), nhập mã PIN.
+  2. Bấm nút Chia sẻ -> "Thêm vào MH chính" để có biểu tượng PikPak như 1 app (lần đầu mở từ biểu tượng
+     phải nhập PIN 1 lần nữa).
+  3. Thanh dưới: Thư mục · Quét & Tải · Lịch sử · Cài đặt · Đèn (bảng đèn trạng thái).
+     Tab Thư mục phim / Cài đặt vẫn cần mật khẩu admin (mở khóa riêng trên từng thiết bị).
+
+CHỈ LÀM ĐƯỢC TRÊN PC
+  Chọn thư mục bằng hộp thoại (trên iPhone gõ đường dẫn vào ô), mở thư mục / file, sao lưu ra file,
+  khôi phục từ file, xuất / nhập danh sách thư mục, chẩn đoán, đổi mật khẩu admin, bật / tắt điều khiển từ xa.
+
+LƯU Ý
+  - Chỉ dùng trong mạng Wi-Fi nhà (PC phải đang bật, tool đang chạy hoặc nằm dưới khay).
+  - Quên mã PIN: đặt lại trên PC. "Đăng xuất mọi thiết bị" để các iPhone / iPad phải nhập PIN lại.
+  - Quay lại bản chính thức: xóa file bản thử, chạy lại "PikPak Auto Save.exe".

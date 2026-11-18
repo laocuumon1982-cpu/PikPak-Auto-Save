@@ -41,13 +41,22 @@ def web_dir():
     raise FileNotFoundError("Không thấy thư mục giao diện 'web' (web/index.html)")
 
 
-def page_html():
-    """index.html với style.css và app.js nhúng thẳng vào (cửa sổ app nạp trang bằng chuỗi HTML)."""
+def page_html(remote=False):
+    """index.html với style.css và app.js nhúng thẳng vào (cửa sổ app nạp trang bằng chuỗi HTML).
+    remote=True: trang cho iPhone / iPad (điều khiển từ xa) - thêm thẻ "Thêm vào MH chính"."""
     d = web_dir()
     html = (d / "index.html").read_text(encoding="utf-8")
     css = (d / "style.css").read_text(encoding="utf-8")
     js = (d / "app.js").read_text(encoding="utf-8")
     html = html.replace('<link rel="stylesheet" href="style.css">', "<style>\n" + css + "\n</style>")
+    html = html.replace('content="width=device-width, initial-scale=1"', 'content="width=device-width, initial-scale=1, viewport-fit=cover"')
+    if remote:
+        html = html.replace("</head>", '<meta name="apple-mobile-web-app-capable" content="yes">\n'
+                            '<meta name="mobile-web-app-capable" content="yes">\n'
+                            '<meta name="apple-mobile-web-app-title" content="PikPak">\n'
+                            '<meta name="apple-mobile-web-app-status-bar-style" content="default">\n'
+                            '<link rel="apple-touch-icon" href="/icon.png"><link rel="manifest" href="/manifest.webmanifest">\n'
+                            "<script>window.REMOTE = true;</script>\n</head>", 1)
     return html.replace('<script src="app.js"></script>', "<script>\n" + js.replace("</script", "<\\/script") + "\n</script>")
 
 
@@ -1961,6 +1970,21 @@ class Api:
             return ""
         return self._eng.update_apply(p)
 
+    # ----- điều khiển từ iPhone / iPad
+    def remote_info(self):
+        r = getattr(self._eng, "remote", None)
+        return r.info() if r else {"error": "không có"}
+
+    def remote_set(self, on, pin, port):
+        r = getattr(self._eng, "remote", None)
+        return r.set(on, pin, port) if r else "không có"
+
+    def remote_logout_all(self):
+        r = getattr(self._eng, "remote", None)
+        if r:
+            r.logout_all()
+        return ""
+
     def classic_ui(self):
         """Mở giao diện cũ (Tk) - dự phòng. Nhớ lựa chọn (mở lại vẫn là giao diện cũ cho tới khi chọn lại web)."""
         if self._eng.busy():
@@ -2183,6 +2207,23 @@ class AppWindow:
                 im.save(str(BASE / f"{name}.jpg"), quality=72)
         except Exception as e:              # noqa: BLE001
             res["shot_error"] = str(e)
+        if os.environ.get("PK_SELFTEST_REMOTE") and getattr(self.eng, "remote", None):
+            try:                            # thử điều khiển từ xa: bật, đăng nhập PIN, gọi api state
+                import urllib.request
+                import http.cookiejar
+                rs = self.eng.remote
+                res["remote_set"] = rs.set(True, "2468", 8686) or "ok"
+                op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+                base = "http://127.0.0.1:8686"
+                res["remote_page"] = len(op.open(base + "/", timeout=10).read())
+                r = op.open(urllib.request.Request(base + "/login", b'{"pin":"2468"}', method="POST"), timeout=10)
+                res["remote_login"] = json.loads(r.read()).get("ok")
+                r = op.open(urllib.request.Request(base + "/api/state", b"[0,0,0]", method="POST"), timeout=10)
+                st = json.loads(r.read())
+                res["remote_state"] = sorted(st)[:6] if isinstance(st, dict) else str(st)[:80]
+                res["remote_urls"] = len(rs.info().get("urls") or [])
+            except Exception as e:          # noqa: BLE001
+                res["remote_error"] = repr(e)
         (BASE / "selftest.txt").write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")
         self.quit()
 
@@ -2243,6 +2284,7 @@ def serve(eng, port=0, open_browser=True):
                 return self._send(500, json.dumps({"error": str(e)}), "application/json")
             self._send(200, json.dumps(res, ensure_ascii=False), "application/json; charset=utf-8")
 
+    _start_remote(eng, api)
     srv = ThreadingHTTPServer(("127.0.0.1", port), H)
     url = f"http://127.0.0.1:{srv.server_address[1]}/"
     print("Giao diện:", url, flush=True)
@@ -2251,6 +2293,17 @@ def serve(eng, port=0, open_browser=True):
         webbrowser.open(url)
     eng.quit_fn = lambda: os._exit(0)
     srv.serve_forever()
+
+
+def _start_remote(eng, api):
+    """Máy chủ điều khiển từ iPhone / iPad (chỉ chạy khi đã bật trong Cài đặt và đã đặt PIN)."""
+    try:
+        import pikpak_remote
+        eng.remote = pikpak_remote.RemoteServer(eng, api, page_html)
+        eng.remote.start()
+    except Exception as e:                  # noqa: BLE001
+        eng.remote = None
+        eng.log(f"⚠ Không bật được điều khiển từ iPhone/iPad: {e}")
 
 
 def run_web(argv=None):
@@ -2271,6 +2324,7 @@ def run_web(argv=None):
         return False
     eng = Engine()
     w = AppWindow(eng, startup="--startup" in argv)
+    _start_remote(eng, Api(eng, w))
     if "--auto" in argv:
         threading.Timer(1.5, lambda: eng.start_scan(True)).start()
     try:
