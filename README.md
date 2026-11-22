@@ -7,6 +7,8 @@ Tool Windows (giao diện web trong cửa sổ app - pywebview / Edge WebView2; 
 
 **Điều khiển từ iPhone / iPad** (v3.3): bật trong Cài đặt → tab 📱 iPhone / iPad, đặt mã PIN, quét mã QR bằng iPhone cùng Wi-Fi rồi "Thêm vào MH chính" – phim vẫn tải về HDD của PC.
 
+Mỗi đợt tool **Save tất cả tập mới vào My PikPak trước**, rồi mới tải lần lượt từng tập về HDD.
+
 Tập đã xong được đưa vào *Danh sách đã có* để lần sau không tải lại. Cùng bộ với [Auto Download - PikPak](https://github.com/laocuumon1982-cpu/PikPakAutoDownload).
 
 - Chạy bằng Python: `ChayTool.bat` (cài thư viện trước bằng `CaiDat.bat`, cần `pywebview`).

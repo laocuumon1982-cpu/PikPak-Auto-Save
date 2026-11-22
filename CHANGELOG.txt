@@ -1,6 +1,13 @@
 PIKPAK AUTO SAVE by Duy Anh - NHẬT KÝ PHIÊN BẢN
 =========================================================
 
+v3.4  (22/11/2026)
+  - Đổi thứ tự Quét & Tải: trước đây làm xong từng tập (Save My PikPak -> tải về HDD) rồi mới sang tập sau;
+    nay ① Save TẤT CẢ tập mới (mọi phim) vào My PikPak trước, ② rồi mới tải lần lượt từng tập về PC.
+    · Tập mới được giữ trong My PikPak ngay, không phải chờ các tập trước tải về xong.
+    · Dừng / tắt tool giữa bước ②: tập đã Save vẫn còn trong My PikPak (không Save lại), lần quét sau chỉ tải tiếp.
+    · Thanh "Σ TỔNG ĐỢT": nửa đầu là bước Save, nửa sau là bước tải về PC; thanh "☁ MY PIKPAK" chạy theo số tập đã Save.
+
 v3.3  (18/11/2026)
   - ĐIỀU KHIỂN TỪ IPHONE / IPAD qua Wi-Fi nhà: tool trên PC mở 1 trang web có mã PIN, iPhone / iPad mở bằng Safari
     (quét mã QR) và "Thêm vào MH chính" để dùng như 1 app. Xem đèn, Quét & Tải, chọn tải, lịch sử, thư mục phim,

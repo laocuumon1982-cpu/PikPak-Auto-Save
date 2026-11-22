@@ -44,7 +44,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "PikPak Auto Save"
-APP_VERSION = "v3.3 by Duy Anh"
+APP_VERSION = "v3.4 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -4385,8 +4385,11 @@ class App(tk.Tk):
                         ("Tự quét xong. " if auto else "Xong. ") ))
 
     def _download_items(self, cfg, items, auto=False):
-        """Tải lần lượt từng file: về máy -> kiểm tra dung lượng -> copy sang HDD -> lưu vào My PikPak."""
-        self.q.put(("progress", 0, len(items)))
+        """Bước 1: Save TẤT CẢ tập mới (mọi phim) vào My PikPak.  Bước 2: rclone tải từ từ từng tập về HDD
+        (+ copy COPY_TO_IPHONE).  Tắt tool giữa chừng: tập đã Save vẫn nằm trong My PikPak, lần quét sau chỉ tải về."""
+        n = len(items)
+        total = n * 2
+        self.q.put(("progress", 0, total))
         ok_names, bad = [], 0
         failed = []
         if self.cfg.get("iphone_on", True):
@@ -4406,17 +4409,56 @@ class App(tk.Tk):
                 self._last_exc = e
                 self._fetch_fail(item, STATUS_FAIL, str(e))
                 return False
+
+        # ----- BƯỚC 1/2: Save tất cả vào My PikPak
+        self.log(f"☁ Bước 1/2: Save {n} tập vào My PikPak...")
+        saved = []
         for i, item in enumerate(items, 1):
             if self.stop_flag.is_set():
                 break
-            self.q.put(("status", f"Đang tải {i}/{len(items)}: {item[2]}"))
-            if run(item):
-                ok_names.append(item[2])
-            else:
+            self.q.put(("status", f"① Save vào My PikPak {i}/{n}: {item[2]}"))
+            self.q.put(("energy", "up", int((i - 1) * 100 / n), f"☁ Save {i}/{n}: {item[2]}"))
+            try:
+                target = self._save_one(cfg, item)
+            except Exception as e:
+                self._last_exc = e
+                self._fetch_fail(item, STATUS_FAIL, str(e))
                 failed.append(item)
-            self.q.put(("progress", i, len(items)))
-            if i < len(items) and not self.stop_flag.is_set():
+            else:
+                if target:
+                    saved.append((item, target))
+                    self.q.put(("rowstatus", item[0], "☁  ① Đã Save vào My PikPak · ⏳ chờ tải về PC", "dl"))
+                elif not self.stop_flag.is_set():
+                    failed.append(item)
+            self.q.put(("progress", i, total))
+        self.q.put(("energy", "up", 100 if saved else 0, f"✔ Đã Save {len(saved)}/{n} tập vào My PikPak"))
+        self.log(f"☁ Bước 1/2 xong: đã Save {len(saved)}/{n} tập vào My PikPak.")
+
+        # ----- BƯỚC 2/2: tải từ từ từng tập về PC
+        if saved and not self.stop_flag.is_set():
+            self.log(f"⬇ Bước 2/2: tải lần lượt {len(saved)} tập từ My PikPak về PC...")
+        for j, (item, target) in enumerate(saved, 1):
+            if self.stop_flag.is_set():
+                break
+            self.q.put(("status", f"② Tải về PC {j}/{len(saved)}: {item[2]}"))
+            try:
+                ok = self._hdd_one(cfg, item, target)
+            except Exception as e:
+                self._last_exc = e
+                self._fetch_fail(item, STATUS_FAIL, str(e))
+                ok = False
+            if ok:
+                ok_names.append(item[2])
+            elif not self.stop_flag.is_set():
+                failed.append(item)
+            self.q.put(("progress", n + j, total))
+            if j < len(saved) and not self.stop_flag.is_set():
                 self.stop_flag.wait(max(0, int(cfg.get("delay", 2) or 0)))
+        if self.stop_flag.is_set():
+            left = [it for it, _t in saved if it[2] not in ok_names]
+            if left:
+                self.log(f"■ Đã dừng - {len(left)} tập đã Save trong My PikPak nhưng chưa tải về PC "
+                         "(lần quét sau tự tải tiếp).")
         # file lỗi giữa chừng (đã xóa file lỗi) -> thử tải lại ngay, tối đa RETRY_NOW lượt
         for rnd in range(1, RETRY_NOW + 1):
             if not failed or self.stop_flag.is_set():
@@ -4438,7 +4480,7 @@ class App(tk.Tk):
                     again.append(item)
             failed = again
         bad = len(failed)
-        self.log(f"Tải xong {len(ok_names)}/{len(items)} file." + (
+        self.log(f"Tải xong {len(ok_names)}/{n} file." + (
             f" {bad} file vẫn lỗi - đã nằm trong danh sách tải lại (lần quét sau tự tải lại): "
             + self._names_preview([x[2] for x in failed]) if bad else ""))
         if ok_names:
@@ -4568,8 +4610,8 @@ class App(tk.Tk):
         self.log(f"LỖI: {val}")
         self.report_error("Lỗi giao diện (không lường trước)", str(val), exc=val)
 
-    def _fetch_one(self, cfg, item):
-        """1 file: ① Save từ link chia sẻ vào My PikPak -> ② rclone tải từ My PikPak về HDD -> Danh sách đã có."""
+    def _item_ctx(self, cfg, item):
+        """Thông tin chung của 1 tập: nguồn, phim, Đích 1 (My PikPak), Đích 2 (HDD), bản ghi lịch sử."""
         fcode, fname, name, size, folder_code = item
         meta = dict(self.item_meta.get(fcode) or (self.history.get(fcode) or {}).get("src") or {})
         if not meta:
@@ -4588,14 +4630,74 @@ class App(tk.Tk):
             size = int(size or 0)
         except (TypeError, ValueError):
             size = 0
+        return dict(meta=meta, fcfg=fcfg, movie=movie, hdd_dir=hdd_dir, pk_dir=pk_dir, size=size)
+
+    def _hist_rec(self, item, ctx, **kw):
+        fcode, _fname, name, _size, folder_code = item
         now = dt.datetime.now()
         rec = dict(self.history.get(fcode) or {})
-        rec.update({"folder": movie, "movie": movie, "source": fcfg.get("name", ""), "folder_code": folder_code,
-                    "name": name, "size": size, "ts": now.timestamp(), "sent_at": now.strftime("%d/%m/%Y %H:%M"),
-                    "status": STATUS_DL, "src": meta, "error": ""})
+        rec.update({"folder": ctx["movie"], "movie": ctx["movie"], "source": ctx["fcfg"].get("name", ""),
+                    "folder_code": folder_code, "name": name, "size": ctx["size"], "ts": now.timestamp(),
+                    "sent_at": now.strftime("%d/%m/%Y %H:%M"), "status": STATUS_DL, "src": ctx["meta"], "error": ""})
+        rec.update(kw)
         self.q.put(("hist", fcode, dict(rec)))
+        return rec
+
+    def _fetch_one(self, cfg, item):
+        """1 file: ① Save từ link chia sẻ vào My PikPak -> ② rclone tải từ My PikPak về HDD -> Danh sách đã có.
+        (Dùng khi tải lại file lỗi; đợt tải bình thường làm ① cho mọi tập trước rồi mới ②.)"""
+        target = self._save_one(cfg, item)
+        return bool(target) and self._hdd_one(cfg, item, target)
+
+    def _save_one(self, cfg, item):
+        """① Save (restore) 1 tập từ link chia sẻ vào My PikPak. Trả về đường dẫn rclone trong My PikPak,
+        "" nếu bị dừng. Đã có sẵn trong My PikPak thì không gửi lại lệnh lưu."""
+        fcode, _fname, name, _size, _fc = item
+        ctx = self._item_ctx(cfg, item)
+        meta = ctx["meta"]
+        self._hist_rec(item, ctx)
+        rclone = find_rclone()
+        if not rclone:
+            raise SourceError("Cần rclone.exe để tải từ link chia sẻ PikPak.")
+        remote = cfg.get("pikpak_remote", "pikpak") or "pikpak"
+        folder_path = ctx["pk_dir"] or pikpak_join(cfg.get("pikpak_root", "") or "My Pack", safe_name(ctx["movie"]))
+        target = f"{remote}:{pikpak_join(folder_path, name)}"
+        self.q.put(("rowstatus", fcode, "☁  ① Đang Save vào My PikPak...", "dl"))
+        code_, out, _e = run_rclone(rclone, ["lsf", target], 60)
+        if not (code_ == 0 and out.strip()):
+            api = pikpak_api(cfg, self.log)
+            pid = api.folder_id(folder_path)
+            api.restore(meta["share"], meta.get("pct", ""), [meta["id"]], pid)
+            found = False
+            for _ in range(30):                # chờ PikPak lưu xong
+                if self.stop_flag.wait(2):
+                    return ""
+                code_, out, _e = run_rclone(rclone, ["lsf", target], 60)
+                if code_ == 0 and out.strip():
+                    found = True
+                    break
+                code_, out, _e = run_rclone(rclone, ["lsf", f"{remote}:My Pack/{name}"], 60)
+                if code_ == 0 and out.strip():     # PikPak lưu vào My Pack -> chuyển sang đích
+                    run_rclone(rclone, ["moveto", f"{remote}:My Pack/{name}", target], 300)
+                    found = True
+                    break
+            if not found:
+                raise SourceError("Đã gửi lệnh lưu nhưng chưa thấy file trong My PikPak (PikPak xử lý chậm?) - "
+                                  "lần sau thử lại.")
+            self.log(f"☁ ① Đã Save vào My PikPak: {target}")
+        else:
+            self.log(f"☁ ① My PikPak đã có sẵn: {target}")
+        self._hist_rec(item, ctx, upload="done", upload_msg=target, upload_ts=time.time())
+        return target
+
+    def _hdd_one(self, cfg, item, src_remote):
+        """② rclone tải 1 tập (đã Save trong My PikPak) về HDD -> copy COPY_TO_IPHONE -> Danh sách đã có."""
+        fcode, _fname, name, _size, folder_code = item
+        ctx = self._item_ctx(cfg, item)
+        size, movie, hdd_dir = ctx["size"], ctx["movie"], ctx["hdd_dir"]
+        rec = self._hist_rec(item, ctx, upload="done", upload_msg=src_remote)
         last = [0.0, -1]
-        phase = ["⬇", "Đang tải"]
+        phase = ["⬇", "② Tải từ My PikPak về HDD"]
 
         def prog(pct, speed=""):
             if pct != last[1] and (time.time() - last[0] > 0.5 or pct >= 100):
@@ -4604,58 +4706,22 @@ class App(tk.Tk):
                 self.q.put(("status", f"{phase[1]} {name}: {pct}%  {speed}"))
                 self.q.put(("energy", "dl", pct, f"{phase[0]} {name}   {speed}".rstrip()))
         self.q.put(("energy", "dl", 0, f"⬇ {name}"))
-
         rclone = find_rclone()
-        remote = cfg.get("pikpak_remote", "pikpak") or "pikpak"
+        if not rclone:
+            raise SourceError("Cần rclone.exe để tải từ My PikPak về HDD.")
         extra = ["--bwlimit", cfg["bwlimit"]] if str(cfg.get("bwlimit", "")).strip() else []
-        src_remote, saved = None, ""
-        # ----- 1. Đích 1: Save (restore) từ link chia sẻ vào My PikPak
-        if meta.get("share"):
-            if not rclone:
-                raise SourceError("Cần rclone.exe để tải từ link chia sẻ PikPak.")
-            folder_path = pk_dir or pikpak_join(cfg.get("pikpak_root", "") or "My Pack", safe_name(movie))
-            target = f"{remote}:{pikpak_join(folder_path, name)}"
-            self.q.put(("rowstatus", fcode, "☁  ① Đang Save vào My PikPak...", "dl"))
-            self.q.put(("energy", "up", 10, f"☁ Save: {name}"))
-            code_, out, _e = run_rclone(rclone, ["lsf", target], 60)
-            if not (code_ == 0 and out.strip()):
-                api = pikpak_api(cfg, self.log)
-                pid = api.folder_id(folder_path)
-                api.restore(meta["share"], meta.get("pct", ""), [meta["id"]], pid)
-                found = False
-                for _ in range(30):                # chờ PikPak lưu xong
-                    if self.stop_flag.wait(2):
-                        return False
-                    code_, out, _e = run_rclone(rclone, ["lsf", target], 60)
-                    if code_ == 0 and out.strip():
-                        found = True
-                        break
-                    code_, out, _e = run_rclone(rclone, ["lsf", f"{remote}:My Pack/{name}"], 60)
-                    if code_ == 0 and out.strip():     # PikPak lưu vào My Pack -> chuyển sang đích
-                        run_rclone(rclone, ["moveto", f"{remote}:My Pack/{name}", target], 300)
-                        found = True
-                        break
-                if not found:
-                    raise SourceError("Đã gửi lệnh lưu nhưng chưa thấy file trong My PikPak (PikPak xử lý chậm?) - "
-                                      "lần sau thử lại.")
-            src_remote = target
-            saved = target
-            self.q.put(("energy", "up", 100, f"✔ Đã Save: {name}"))
-            self.log(f"☁ ① Đã Save vào My PikPak: {target}")
+
         def stopped():
             rec["status"] = STATUS_FAIL
             self.q.put(("hist", fcode, dict(rec)))
-            self.q.put(("rowstatus", fcode, "■  Đã dừng", "skip"))
+            self.q.put(("rowstatus", fcode, "■  Đã dừng · đã Save trong My PikPak, chưa tải về PC", "skip"))
             return False
 
-        # ----- 2. Đích 2: rclone tải từ My PikPak về HDD (đa luồng)
         os.makedirs(hdd_dir, exist_ok=True)
         dst = os.path.join(hdd_dir, safe_name(name))
         if os.path.isfile(dst) and (os.path.getsize(dst) == size if size else os.path.getsize(dst) > 0):
             self.log(f"[{name}] HDD đã có đủ file - bỏ qua bước tải.")
         else:
-            phase[:] = ["⬇", "② Tải từ My PikPak về HDD"]
-            last[1] = -1
             self.q.put(("rowstatus", fcode, "⬇  ② Đang tải từ My PikPak về HDD...", "dl"))
             ok, msg = rclone_copy(rclone, src_remote, dst, prog, self.stop_flag, extra)
             if self.stop_flag.is_set() and not ok:
@@ -4678,7 +4744,7 @@ class App(tk.Tk):
         last[1] = -1
         self._copy_to_iphone(item, fcode, name, dst, size, prog)
         rec.update(status=STATUS_DONE, done_ts=time.time(), path=dst, hdd=dst, tries=0, error="",
-                   upload="done", upload_msg=saved, upload_ts=time.time())
+                   upload="done", upload_msg=src_remote, upload_ts=time.time())
         self.q.put(("hist", fcode, dict(rec)))
         self.q.put(("owned_add", fcode, folder_code, movie, name, size, "tool"))
         self.q.put(("rowstatus", fcode, "✔  Xong · My PikPak · HDD" + (" · iPhone" if cfg.get("iphone_on", True) else ""),

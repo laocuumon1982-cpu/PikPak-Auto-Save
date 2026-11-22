@@ -1,4 +1,4 @@
-PIKPAK AUTO SAVE v3.3 by Duy Anh - HƯỚNG DẪN
+PIKPAK AUTO SAVE v3.4 by Duy Anh - HƯỚNG DẪN
 ========================================================
 
 NGUYÊN LÝ
@@ -10,8 +10,10 @@ NGUYÊN LÝ
    - Đích 2 · HDD (bắt buộc): rclone (tài khoản của bạn) tải tập đó từ My PikPak về thư mục HDD (đa luồng).
    - COPY_TO_IPHONE (mặc định bật): tải về HDD xong copy thêm 1 bản vào C:\Users\<tên>\Downloads\Video\COPY_TO_IPHONE
      (mọi phim chung 1 thư mục; đổi thư mục / tắt ở Cài đặt > Chung).
-   Tool quét nguồn, chỉ lấy tập CHƯA có trong "Danh sách đã có" -> ① Save My PikPak -> ② tải về HDD
-   -> thêm vào Danh sách đã có để lần sau không tải lại.
+   Tool quét nguồn, chỉ lấy tập CHƯA có trong "Danh sách đã có", rồi làm 2 bước (từ v3.4):
+     ① Save TẤT CẢ tập mới của mọi phim vào My PikPak trước (nhanh, vài giây mỗi tập)
+     ② sau đó mới tải từ từ từng tập từ My PikPak về HDD (+ copy COPY_TO_IPHONE) -> thêm vào Danh sách đã có.
+   Bấm Dừng / tắt máy giữa bước ②: các tập đã nằm an toàn trong My PikPak, lần quét sau chỉ tải tiếp về PC.
 
 LẦN ĐẦU
    1. Chạy CaiDat.bat (hoặc dùng bản exe ở mục Releases trên GitHub). Chưa có rclone.exe: tool TỰ tải về.

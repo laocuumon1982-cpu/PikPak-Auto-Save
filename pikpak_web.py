@@ -92,6 +92,7 @@ class Engine:
     """Trạng thái + mọi thao tác. Hàm quét / tải / báo lỗi / sao lưu... mượn thẳng từ core.App."""
     BORROWED = ("note_listing", "owned_index", "is_owned", "add_owned", "remove_owned", "_scan_job", "_download_job",
                 "_download_items", "_fetch_fail", "_remove_broken", "report_error", "_fetch_one", "_copy_to_iphone",
+                "_item_ctx", "_hist_rec", "_save_one", "_hdd_one",
                 "_names_preview", "check_pikpak", "_backup_remote", "_do_backup", "diagnose_folder",
                 "_diagnose_done", "_apply_profile", "_init_machine_profile", "_fix_missing_paths",
                 "_store_machine_profile", "enqueue_upload", "_resume_uploads", "_uploader_loop", "_up_file",
